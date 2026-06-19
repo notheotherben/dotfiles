@@ -5,12 +5,12 @@ opentelemetry = "{{ $fields.telemetry.value }}/v1/metrics"
 
 [global.hooks]
 run-before = [
-    "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- ($fields "server").value -}}/{{- ($fields "volume").value -}}\"'"
+    "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- $fields.server.value -}}/{{- $fields.volume.value -}}\"'"
 ]
 
 [repository]
-repository = '/Volumes/{{- ($fields "volume").value -}}/'
-password = '{{- ($fields "encryption password").value -}}'
+repository = '/Volumes/{{- $fields.volume.value -}}/'
+password = '{{- $fields.encryption.value -}}'
 
 [snapshot-filter]
 filter-hosts = ["{{ .chezmoi.hostname }}", "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"]
