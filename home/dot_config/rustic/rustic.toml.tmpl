@@ -1,3 +1,4 @@
+{{- with $root := . }}
 {{- with $details := onepasswordDetailsFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
 {{- with $fields := onepasswordItemFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
 [global]
@@ -13,26 +14,27 @@ repository = '/Volumes/{{- $fields.volume.value -}}/'
 password = '{{- $fields.encryption.value -}}'
 
 [snapshot-filter]
-filter-hosts = ["{{ .chezmoi.hostname }}", "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"]
+filter-hosts = ["{{ $root.chezmoi.hostname }}", "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"]
 
 [backup]
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
-host = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+host = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 git-ignore = true
-metrics-job = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+metrics-job = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 
 [backup.metrics-labels]
 "service.name" = "rustic"
-"host.name" = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+"host.name" = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 
 [[backup.snapshots]]
-sources = ['/Users/{{- .chezmoi.username -}}/']
+sources = ['/Users/{{- $root.chezmoi.username -}}/']
 
 [forget]
-filter-hosts = ["{{ .chezmoi.hostname }}", "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"]
+filter-hosts = ["{{ $root.chezmoi.hostname }}", "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"]
 keep-tags = []
 keep-within-daily = "7 days"
 keep-monthly = 5
 keep-yearly = 2
+{{- end -}}
 {{- end -}}
 {{- end -}}
