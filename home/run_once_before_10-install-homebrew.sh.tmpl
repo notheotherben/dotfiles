@@ -1,0 +1,12 @@
+#!/bin/sh
+# Bootstrap Homebrew if it isn't already present. Runs before chezmoi writes
+# any files. Everything else (mise, chezmoi itself, all packages) is installed
+# from ~/.Brewfile by the brew-bundle script that runs afterwards.
+set -eu
+
+{{ if not (lookPath "brew") -}}
+echo "==> Installing Homebrew"
+NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+{{ else -}}
+echo "==> Homebrew already installed"
+{{ end -}}

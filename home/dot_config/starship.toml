@@ -1,0 +1,22 @@
+# Starship prompt — deployed by chezmoi to ~/.config/starship.toml
+# Ported verbatim from the old home-manager programs.starship.settings.
+
+format = "\n[](fg:#7287fd)[$directory](bg:#7287fd)[](fg:#7287fd bg:#313244)$git_branch[](fg:#313244 bg:#45475a)$git_status[](#45475a bg:#585b70)$time[](fg:#585b70 bg:none) $all$character "
+
+add_newline = true
+
+[directory]
+style = "bg:#7287fd fg:#ffffff"
+
+[git_branch]
+format = "[ $symbol$branch ]($style)"
+style = "bg:#313244 fg:#ffffff"
+
+[git_status]
+format = "[ $all_status$ahead_behind ]($style)"
+style = "bg:#45475a fg:#ffffff"
+
+[time]
+disabled = false
+format = "[ $time ]($style)"
+style = "bg:#585b70 fg:#ffffff"

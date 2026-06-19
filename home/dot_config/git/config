@@ -1,0 +1,14 @@
+[pull]
+	rebase = true
+[init]
+	defaultBranch = main
+[user]
+	name = Benjamin Pannell
+	email = benjamin@pannell.dev
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILps0qzyssGwA6UyIxBOgHg1RhA92zlY4GKdASmERLUl
+[commit]
+	gpgsign = true
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Ported from the old extras/rustic.nix launchd.agents.rustic-backup. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pannell.rustic-backup</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/rustic</string>
+		<string>backup</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Minute</key>
+			<integer>0</integer>
+		</dict>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>{{ .chezmoi.homeDir }}/.config/rustic</string>
+	<key>StandardOutPath</key>
+	<string>{{ .chezmoi.homeDir }}/Library/Logs/rustic-backup.log</string>
+	<key>StandardErrorPath</key>
+	<string>{{ .chezmoi.homeDir }}/Library/Logs/rustic-backup.err.log</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>

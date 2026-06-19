@@ -1,0 +1,35 @@
+# zsh config — deployed by chezmoi to ~/.zshrc
+# Fallback shell; fish is the primary login shell. Replaces the old nix
+# programs.zsh interactiveShellInit block.
+
+# Completion
+autoload -Uz compinit && compinit
+
+# Tool versions, PATH and env vars (VAULT_ADDR, GITTOOL_CONFIG, …)
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
+# Prompt
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+
+# Shell history sync
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init zsh)"
+fi
+
+# git-tool integration
+if command -v git-tool >/dev/null 2>&1; then
+  eval "$(git-tool shell-init zsh)"
+fi
+
+# Syntax highlighting (must be sourced last)
+if [ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
+  source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
+# Aliases
+alias gt='git-tool'
+alias http='xh'

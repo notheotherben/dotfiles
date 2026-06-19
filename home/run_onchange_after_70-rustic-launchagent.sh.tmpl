@@ -1,0 +1,16 @@
+#!/bin/sh
+# (Re)load the rustic-backup LaunchAgent whenever the plist changes.
+# Ported from extras/rustic.nix.
+#
+# plist hash: {{ include "Library/LaunchAgents/dev.pannell.rustic-backup.plist.tmpl" | sha256sum }}
+set -eu
+
+label="dev.pannell.rustic-backup"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+domain="gui/$(id -u)"
+
+mkdir -p "$HOME/Library/Logs"
+
+echo "==> Reloading LaunchAgent $label"
+launchctl bootout "$domain/$label" 2>/dev/null || true
+launchctl bootstrap "$domain" "$plist"

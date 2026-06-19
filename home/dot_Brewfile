@@ -1,0 +1,60 @@
+# Homebrew Bundle manifest — deployed by chezmoi to ~/.Brewfile
+#
+#   Apply with:  brew bundle --global
+#   Edit via:    chezmoi edit ~/.Brewfile   (source: home/dot_Brewfile)
+#
+# Language runtimes (node, go, python, deno, java, rust) and git-tool are
+# managed by mise instead — see ~/.config/mise/config.toml.
+
+tap "hashicorp/tap"
+
+# === Shell & prompt ===
+brew "fish"                    # primary login shell
+brew "zsh-syntax-highlighting" # zsh fallback niceties
+brew "starship"                # prompt
+brew "atuin"                   # shell history sync
+brew "direnv"                  # per-directory environments
+
+# === Version / config managers ===
+brew "mise"                    # language runtimes + git-tool (ubi)
+brew "chezmoi"                 # this dotfiles manager
+
+# === Core CLI ===
+brew "git"
+brew "vim"
+brew "jq"
+brew "xh"                      # aliased to `http`
+brew "shellcheck"
+brew "grpcurl"
+brew "protobuf"                # `protoc`
+brew "speedtest-cli"
+brew "ansible"
+brew "azure-cli"
+brew "caddy"
+brew "rustic"                  # backup tool (driven by the rustic-backup LaunchAgent)
+brew "powershell"
+
+# === Rust tooling ===
+brew "cargo-binstall"
+brew "rustup"
+
+# === Python tooling ===
+brew "uv"
+
+# === .NET ===
+brew "dotnet@10"                # mise's dotnet support is a community plugin; brew is more reliable
+
+# === HashiCorp ===
+brew "hashicorp/tap/vault"
+brew "hashicorp/tap/terraform"
+
+# === Casks (GUI apps) ===
+cask "orbstack"                # Docker / Linux runtime (replaces the docker CLI)
+cask "tailscale-app"           # Tailscale GUI + CLI
+cask "android-platform-tools"  # adb / fastboot (was `android-tools`)
+
+# 1Password is installed manually (latest beta) so that `op` and
+# op-ssh-sign (used for git commit signing) are available. Uncomment to
+# let Homebrew manage them instead:
+# cask "1password"
+# cask "1password-cli"

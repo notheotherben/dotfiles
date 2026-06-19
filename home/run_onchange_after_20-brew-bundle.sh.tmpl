@@ -1,0 +1,14 @@
+#!/bin/sh
+# Install/upgrade everything in ~/.Brewfile. Re-runs automatically whenever the
+# Brewfile changes (the hash below forces chezmoi to detect the change).
+#
+# Brewfile hash: {{ include "dot_Brewfile" | sha256sum }}
+set -eu
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+echo "==> brew update"
+brew update
+
+echo "==> brew bundle (~/.Brewfile)"
+brew bundle --global --no-upgrade

@@ -1,0 +1,38 @@
+{{- with $details := onepasswordDetailsFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
+{{- with $fields := onepasswordItemFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
+[global]
+opentelemetry = "{{ $fields.telemetry.value }}/v1/metrics"
+
+[global.hooks]
+run-before = [
+    "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- ($fields "server").value -}}/{{- ($fields "volume").value -}}\"'"
+]
+
+[repository]
+repository = '/Volumes/{{- ($fields "volume").value -}}/'
+password = '{{- ($fields "encryption password").value -}}'
+
+[snapshot-filter]
+filter-hosts = ["{{ .chezmoi.hostname }}", "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"]
+
+[backup]
+exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
+host = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+git-ignore = true
+metrics-job = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+
+[backup.metrics-labels]
+"service.name" = "rustic"
+"host.name" = "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"
+
+[[backup.snapshots]]
+sources = ['/Users/{{- .chezmoi.username -}}/']
+
+[forget]
+filter-hosts = ["{{ .chezmoi.hostname }}", "{{ .chezmoi.hostname }}.{{ $fields.domain.value -}}"]
+keep-tags = []
+keep-within-daily = "7 days"
+keep-monthly = 5
+keep-yearly = 2
+{{- end -}}
+{{- end -}}
