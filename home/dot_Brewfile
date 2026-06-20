@@ -52,6 +52,16 @@ brew "hashicorp/tap/terraform"
 cask "orbstack"                # Docker / Linux runtime (replaces the docker CLI)
 cask "tailscale-app"           # Tailscale GUI + CLI
 cask "android-platform-tools"  # adb / fastboot (was `android-tools`)
+cask "fastmail"
+cask "firefox"
+cask "zed"
+cask "claude-code"
+cask "todoist-app"
+cask "spotify"
+cask "little-snitch"
+cask "whatsapp"
+cask "signal"
+cask "telegram"
 
 # 1Password is installed manually (latest beta) so that `op` and
 # op-ssh-sign (used for git commit signing) are available. Uncomment to
