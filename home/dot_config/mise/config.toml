@@ -9,6 +9,7 @@
 deno = "latest"
 go = "latest"
 node = "lts"
+rust = "latest"
 
 # git-tool ships prebuilt release binaries but has no Homebrew tap, so we pull
 # it straight from GitHub releases via mise's `ubi` backend.
