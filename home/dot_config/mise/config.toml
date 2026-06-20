@@ -12,7 +12,7 @@ deno = "latest"
 
 # git-tool ships prebuilt release binaries but has no Homebrew tap, so we pull
 # it straight from GitHub releases via mise's `ubi` backend.
-"ubi:SierraSoftworks/git-tool" = { version = "latest", exe = "git-tool", matching = "darwin-arm64" }
+"github:SierraSoftworks/git-tool" = { version = "latest", exe = "git-tool", matching = "darwin-arm64" }
 
 [env]
 # Replaces the old nix `environment.variables` block.
