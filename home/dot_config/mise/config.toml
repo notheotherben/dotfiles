@@ -11,10 +11,6 @@ go = "latest"
 node = "lts"
 rust = "latest"
 
-# git-tool ships prebuilt release binaries but has no Homebrew tap, so we pull
-# it straight from GitHub releases via mise's `ubi` backend.
-# "github:SierraSoftworks/git-tool" = { version = "latest", exe = "git-tool", matching = "darwin-arm64" }
-
 [env]
 GITTOOL_CONFIG = "{{env.HOME}}/dev/git-tool.yml"
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"

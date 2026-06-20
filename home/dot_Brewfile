@@ -7,6 +7,7 @@
 # managed by mise instead — see ~/.config/mise/config.toml.
 
 tap "hashicorp/tap"
+tap "sierrasoftworks/tap"
 
 brew "mise"                    # language runtimes
 brew "chezmoi"                 # this dotfiles manager
@@ -53,3 +54,7 @@ brew "zsh-syntax-highlighting" # zsh fallback niceties
 
 brew "hashicorp/tap/vault"
 brew "hashicorp/tap/terraform"
+
+brew "sierrasoftworks/tap/git-tool"
+brew "sierrasoftworks/tap/shig"
+brew "sierrasoftworks/tap/tailservice"
