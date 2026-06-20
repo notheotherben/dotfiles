@@ -6,7 +6,14 @@ opentelemetry = "{{ $fields.telemetry.value }}/v1/metrics"
 
 [global.hooks]
 run-before = [
-    "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- $fields.server.value -}}/{{- $fields.volume.value -}}\"'"
+  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=running&token={{ $fields.cron_token.value }}",
+  "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- $fields.server.value -}}/{{- $fields.volume.value -}}\"'"
+]
+run-after = [
+  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=succeeded&token={{ $fields.cron_token.value }}"
+]
+run-failed = [
+  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=failed&token={{ $fields.cron_token.value }}"
 ]
 
 [repository]
