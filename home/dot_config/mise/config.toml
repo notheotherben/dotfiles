@@ -19,6 +19,7 @@ deno = "latest"
 VAULT_ADDR = "https://vault.sierrasoftworks.com"
 VAULT_SSH_ROLE = "admin"
 GITTOOL_CONFIG = "{{env.HOME}}/dev/git-tool.yml"
+OP_BIOMETRIC_UNLOCK_ENABLED = "true"
 
 # Replaces the old nix shellInit `fish_add_path` / home.sessionPath entries.
 # Applied to every shell that activates mise.
