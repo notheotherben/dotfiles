@@ -21,6 +21,7 @@ cask "little-snitch"
 cask "orbstack"                # Docker / Linux runtime (replaces the docker CLI)
 cask "signal"
 cask "spotify"
+cask "synology-drive"
 cask "tailscale-app"           # Tailscale GUI + CLI
 cask "telegram"
 cask "todoist-app"
