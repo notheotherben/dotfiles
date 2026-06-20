@@ -6,20 +6,19 @@
 # no Homebrew formula). Everything else lives in ~/.Brewfile.
 
 [tools]
-node = "lts"
-go = "latest"
 deno = "latest"
+go = "latest"
+node = "lts"
 
 # git-tool ships prebuilt release binaries but has no Homebrew tap, so we pull
 # it straight from GitHub releases via mise's `ubi` backend.
 # "github:SierraSoftworks/git-tool" = { version = "latest", exe = "git-tool", matching = "darwin-arm64" }
 
 [env]
-# Replaces the old nix `environment.variables` block.
-VAULT_ADDR = "https://vault.sierrasoftworks.com"
-VAULT_SSH_ROLE = "admin"
 GITTOOL_CONFIG = "{{env.HOME}}/dev/git-tool.yml"
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"
+VAULT_ADDR = "https://vault.sierrasoftworks.com"
+VAULT_SSH_ROLE = "admin"
 
 # Replaces the old nix shellInit `fish_add_path` / home.sessionPath entries.
 # Applied to every shell that activates mise.
