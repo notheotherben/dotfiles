@@ -29,7 +29,7 @@ if type -q op
     op completion fish | source
 end
 
-if -f ~/export-esp.sh
+if test -f ~/export-esp.sh
     source ~/export-esp.sh
 end
 
