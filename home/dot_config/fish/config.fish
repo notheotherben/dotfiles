@@ -29,6 +29,10 @@ if type -q op
     op completion fish | source
 end
 
+if -f ~/export-esp.sh
+    source ~/export-esp.sh
+end
+
 # Aliases (was nix environment.shellAliases / home.shellAliases)
 alias gt 'git-tool'
 alias http 'xh'
