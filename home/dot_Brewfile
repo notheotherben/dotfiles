@@ -34,7 +34,6 @@ brew "atuin"                   # shell history sync
 brew "azure-cli"
 brew "caddy"
 brew "cargo-binstall"
-brew "direnv"                  # per-directory environments
 brew "dotnet@10"                # mise's dotnet support is a community plugin; brew is more reliable
 brew "fish"                    # primary login shell
 brew "git"
