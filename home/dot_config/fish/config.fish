@@ -29,6 +29,10 @@ if type -q op
     op completion fish | source
 end
 
+# Enable the use of sudo !! for last command elevation
+function last_history_item; echo $history[1]; end
+abbr -a !! --position anywhere --function last_history_item
+
 if test -f ~/export-esp.sh
     source ~/export-esp.sh
 end
@@ -36,3 +40,4 @@ end
 # Aliases (was nix environment.shellAliases / home.shellAliases)
 alias gt 'git-tool'
 alias http 'xh'
+
