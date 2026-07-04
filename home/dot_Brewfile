@@ -51,8 +51,9 @@ brew "vim"
 brew "xh"                      # aliased to `http`
 brew "zsh-syntax-highlighting" # zsh fallback niceties
 
-brew "hashicorp/tap/vault"
+brew "hashicorp/tap/nomad"
 brew "hashicorp/tap/terraform"
+brew "hashicorp/tap/vault"
 
 brew "sierrasoftworks/tap/git-tool"
 brew "sierrasoftworks/tap/shig"
