@@ -52,6 +52,7 @@ brew "xh"                      # aliased to `http`
 brew "zsh-syntax-highlighting" # zsh fallback niceties
 
 brew "hashicorp/tap/nomad"
+brew "hashicorp/tap/nomad-pack"
 brew "hashicorp/tap/terraform"
 brew "hashicorp/tap/vault"
 
