@@ -7,66 +7,83 @@ home-manager setup).
 | Concern | macOS | Linux |
 | --- | --- | --- |
 | GUI apps, system services, most CLIs | Homebrew (`~/.Brewfile`) | pacman / AUR / Flathub |
-| Tools with no native package (`git-tool`, `shig`, `tailservice`) | Homebrew (`sierrasoftworks/tap`) | Homebrew (`sierrasoftworks/tap`) |
+| Tools with no native package (`git-tool`, `shig`, `tailservice`) | Homebrew (`sierrasoftworks/tap`) | mise (`conf.d/linux.toml`) |
 | Language runtimes | mise (`~/.config/mise/config.toml`) | mise |
-| Dotfiles, OS defaults, LaunchAgents, one-off setup | chezmoi (this repo) | chezmoi (this repo) |
+| Scheduled backups | launchd (LaunchAgent) | systemd user timer |
+| Dotfiles, OS defaults, one-off setup | chezmoi (this repo) | chezmoi (this repo) |
 
-On Linux, Homebrew is deliberately limited to the Sierra Softworks tap —
-anything that pacman, the AUR, or Flathub provides is installed from there
-instead. See [home/run_onchange_after_15-arch-packages.sh.tmpl](home/run_onchange_after_15-arch-packages.sh.tmpl).
+Native packages win wherever they exist. Homebrew is macOS-only: on Linux
+everything comes from pacman, the AUR, or Flathub — see
+[home/run_onchange_after_15-arch-packages.sh.tmpl](home/run_onchange_after_15-arch-packages.sh.tmpl).
+The Sierra Softworks tools are the one exception, with no distro package at all,
+so mise pulls the same GitHub release binaries the tap would.
 
 ## Bootstrap a fresh machine
 
 ```bash
 # 1. Install chezmoi and apply this repo in one shot.
-#    (chezmoi pulls the repo, then its run_ scripts install Homebrew, run
-#     `brew bundle`, `mise install`, set macOS defaults, etc.)
+#    (chezmoi pulls the repo, then its run_ scripts install the package manager,
+#     sync packages, run `mise install`, set OS defaults, etc.)
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply notheotherben/dotfiles
 
 # 2. Open a new shell (fish is now the default login shell).
 ```
 
-On Apple Silicon Homebrew lives at `/opt/homebrew`; on Linux at
-`/home/linuxbrew/.linuxbrew`. The scripts assume those prefixes.
+On Apple Silicon Homebrew lives at `/opt/homebrew`; the scripts assume that
+prefix. On Linux the package script installs `paru` if no AUR helper is present
+(CachyOS already ships one).
 
 ## Day-to-day
 
 ```bash
-chezmoi edit ~/.Brewfile     # change packages, then:
-chezmoi apply                # re-runs brew bundle / mise install on change
-
-brew bundle --global         # install/upgrade Homebrew packages manually
-mise install                 # install/upgrade mise tools manually
+chezmoi edit ~/.Brewfile     # macOS packages
+chezmoi edit --source home/run_onchange_after_15-arch-packages.sh.tmpl  # Linux packages
+chezmoi apply                # re-runs the package sync / mise install on change
 chezmoi update               # git pull + apply
+
+brew bundle --global         # macOS: install/upgrade packages manually
+mise install                 # install/upgrade mise tools manually
 ```
+
+## How the platform split works
+
+Every `run_` script is a chezmoi template whose body is wrapped in an
+`{{ if eq .chezmoi.os "…" }}` guard, falling through to `exit 0` on the other
+platform. Files that only exist on one platform (the Brewfile, the LaunchAgent,
+the systemd units, the Linux-only mise config) are filtered by
+`home/.chezmoiignore`.
 
 ## Layout
 
 ```
 .chezmoiroot                 -> "home" (chezmoi source root is home/)
 home/
-  .chezmoiignore             macOS-only targets are skipped on Linux
-  dot_Brewfile.tmpl          -> ~/.Brewfile          (Homebrew manifest)
-  dot_gitconfig              -> ~/.gitconfig
+  .chezmoiignore             per-OS file filtering
+  dot_Brewfile               -> ~/.Brewfile          (Homebrew manifest, macOS)
   dot_zshrc                  -> ~/.zshrc
   dot_config/
-    fish/config.fish         -> ~/.config/fish/config.fish
+    fish/config.fish.tmpl    -> ~/.config/fish/config.fish
     ghostty/config           -> ~/.config/ghostty/config
+    git/config.tmpl          -> ~/.config/git/config         (per-OS op-ssh-sign)
     hypr/config/…            -> ~/.config/hypr/config/…       (Linux)
     starship.toml            -> ~/.config/starship.toml
     mise/config.toml         -> ~/.config/mise/config.toml
+    mise/conf.d/linux.toml   -> extra mise tools              (Linux only)
+    rustic/rustic.toml.tmpl  -> ~/.config/rustic/rustic.toml (per-OS repo path)
+    systemd/user/…           -> rustic-backup .service/.timer (Linux only)
     Yubico/u2f_keys          -> ~/.config/Yubico/u2f_keys  (from 1Password, Linux)
     certs/…                  -> internal CA bundle
-  Library/LaunchAgents/…     -> ~/Library/LaunchAgents/dev.pannell.rustic-backup.plist
-  run_once_before_10-install-homebrew.sh   bootstrap Homebrew
+  private_dot_ssh/private_config.tmpl -> ~/.ssh/config        (per-OS 1Password agent socket)
+  Library/LaunchAgents/…     -> rustic-backup plist           (macOS only)
+  run_once_before_10-install-homebrew.sh   bootstrap Homebrew       (macOS)
   run_onchange_after_15-arch-packages.sh   pacman / AUR / flatpak   (Linux)
-  run_onchange_after_20-brew-bundle.sh     brew bundle --global
+  run_onchange_after_20-brew-bundle.sh     brew bundle --global     (macOS)
   run_onchange_after_30-mise-install.sh    mise install
   run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
   run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit (Linux)
   run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
   run_once_after_60-default-shell.sh       chsh to fish
-  run_onchange_after_70-rustic-launchagent.sh  (re)load backup agent (macOS)
+  run_onchange_after_70-rustic-schedule.sh (re)load LaunchAgent / systemd timer
   run_once_after_80-trust-internal-ca.sh   trust internal CA
 ```
 
@@ -75,17 +92,20 @@ re-run whenever the thing they manage changes.
 
 ## Notes / manual steps
 
-- **1Password** is installed manually (latest beta) so `op` and `op-ssh-sign`
-  (git commit signing) are available. Brewfile entries are commented out.
-  On Linux the `1password` / `1password-cli` AUR packages provide both.
-- **rustic backup** expects its config at `~/.config/rustic`; the LaunchAgent
-  runs `rustic backup` hourly. Create that config separately. macOS only —
-  the config and LaunchAgent are ignored on Linux.
+- **1Password** provides the SSH agent and `op-ssh-sign` for commit signing.
+  The agent socket and signer binary live in different places on each platform,
+  so `~/.ssh/config` and `~/.config/git/config` are templated accordingly. The
+  stable release supports both, so no beta channel is needed.
+- **rustic backup** runs hourly and expects its config at `~/.config/rustic`.
+  On macOS the pre-backup hook mounts the SMB share via `osascript` under
+  `/Volumes`; on Linux the repository is `/backup`, mounted at boot from
+  `/etc/fstab`, and the systemd unit declares `RequiresMountsFor=/backup`.
 - The Touch ID, default-shell, and CA-trust scripts call `sudo` and will prompt
   for your password on first apply. On Linux the pacman/AUR/flatpak script does
   too.
-- No Linux equivalent is installed for `little-snitch`; `orbstack` is replaced
-  by a native `docker` install.
+- No Linux equivalent is installed for `little-snitch` (`opensnitch` in `extra`
+  is the closest); `orbstack` is replaced by a native `docker` install, and
+  WhatsApp has no official Linux client so Flathub's ZapZap stands in.
 - **Yubikey / pam_u2f** (Linux) is the counterpart to Touch ID: it adds a
   `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}`. Login/SDDM are
   deliberately excluded because systemd-homed needs the password to unlock the

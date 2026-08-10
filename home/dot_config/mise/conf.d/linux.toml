@@ -1,0 +1,10 @@
+# Extra global mise config — deployed by chezmoi to ~/.config/mise/conf.d/linux.toml
+#
+# mise merges every conf.d/*.toml into the global config. This file holds the
+# SierraSoftworks tools, which are a Homebrew tap on macOS but have no Arch or
+# AUR package, so mise is the only option on Linux.
+
+[tools]
+"ubi:SierraSoftworks/git-tool" = "latest"
+"ubi:SierraSoftworks/shig" = "latest"
+"ubi:SierraSoftworks/tailservice" = "latest"

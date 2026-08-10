@@ -1,8 +1,11 @@
 #!/bin/sh
-# Install the language runtimes + git-tool declared in the global mise config.
+# Install the language runtimes declared in the global mise config.
 # Re-runs whenever that config changes.
 #
 # mise config hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
+{{ if eq .chezmoi.os "linux" -}}
+# conf.d hash: {{ include "dot_config/mise/conf.d/linux.toml" | sha256sum }}
+{{ end -}}
 set -eu
 
 {{ if eq .chezmoi.os "darwin" -}}

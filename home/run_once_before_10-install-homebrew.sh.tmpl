@@ -1,14 +1,19 @@
 #!/bin/sh
 # Bootstrap Homebrew if it isn't already present. Runs before chezmoi writes
 # any files. Everything else (mise, chezmoi itself, all packages) is installed
-# from ~/.Brewfile by the brew-bundle script that runs afterwards — except on
-# Linux, where pacman/AUR/flatpak cover all but the Sierra Softworks tap.
+# from ~/.Brewfile by the brew-bundle script that runs afterwards.
+#
+# macOS only — on Linux pacman/AUR/flatpak cover everything, and the few tools
+# with no distro package come from mise.
+{{ if eq .chezmoi.os "darwin" -}}
 set -eu
 
-{{ $brew := ternary "/opt/homebrew/bin/brew" "/home/linuxbrew/.linuxbrew/bin/brew" (eq .chezmoi.os "darwin") -}}
-{{ if or (lookPath "brew") (stat $brew) -}}
-echo "==> Homebrew already installed"
-{{ else -}}
+{{ if not (lookPath "brew") -}}
 echo "==> Installing Homebrew"
 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+{{ else -}}
+echo "==> Homebrew already installed"
+{{ end -}}
+{{ else -}}
+exit 0
 {{ end -}}

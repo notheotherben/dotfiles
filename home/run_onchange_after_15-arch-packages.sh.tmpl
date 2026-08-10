@@ -1,7 +1,6 @@
 #!/bin/sh
 # Arch/CachyOS package manifest — the Linux counterpart to ~/.Brewfile.
-# Anything available from pacman, the AUR, or Flathub is installed here rather
-# than through Homebrew; only the Sierra Softworks tap is left to brew bundle.
+# Anything available from pacman, the AUR, or Flathub is installed here.
 # Re-runs whenever the lists below change.
 {{ if eq .chezmoi.os "linux" -}}
 set -eu
@@ -12,10 +11,10 @@ pacman_packages="
   ansible
   atuin
   azure-cli
+  base-devel
   caddy
   cargo-binstall
   chezmoi
-  claude-code
   docker
   docker-buildx
   docker-compose
@@ -49,6 +48,7 @@ pacman_packages="
 aur_packages="
   1password
   1password-cli
+  claude-code
   nomad-pack
   powershell-bin
   synology-drive
@@ -67,10 +67,12 @@ flatpak_packages="
 #   little-snitch  -> no equivalent (opensnitch in the AUR is the closest)
 #   orbstack       -> Docker runs natively (docker/docker-compose above)
 #   grpcurl        -> the AUR build fails; install it by hand if needed
+# git-tool/shig/tailservice have no distro package at all and come from mise —
+# see dot_config/mise/conf.d/linux.toml.
 
 echo "==> pacman"
 # shellcheck disable=SC2086
-sudo pacman -S --needed --noconfirm $pacman_packages
+sudo pacman -Syu --needed --noconfirm $pacman_packages
 
 aur_helper=""
 for candidate in paru yay; do
@@ -80,13 +82,19 @@ for candidate in paru yay; do
   fi
 done
 
-if [ -n "$aur_helper" ]; then
-  echo "==> $aur_helper (AUR)"
-  # shellcheck disable=SC2086
-  "$aur_helper" -S --needed --noconfirm $aur_packages
-else
-  echo "!! no AUR helper (paru/yay) found — skipping:$aur_packages"
+if [ -z "$aur_helper" ]; then
+  # CachyOS ships paru, but a plain Arch install won't.
+  echo "==> Installing paru"
+  build="$(mktemp -d)"
+  git clone --depth 1 https://aur.archlinux.org/paru-bin.git "$build/paru-bin"
+  (cd "$build/paru-bin" && makepkg -si --noconfirm)
+  rm -rf "$build"
+  aur_helper="paru"
 fi
+
+echo "==> $aur_helper (AUR)"
+# shellcheck disable=SC2086
+"$aur_helper" -S --needed --noconfirm $aur_packages
 
 if command -v flatpak >/dev/null 2>&1; then
   echo "==> flatpak"

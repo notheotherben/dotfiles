@@ -2,8 +2,9 @@
 #
 #   Install/upgrade tools with:  mise install   (or `mise up`)
 #
-# mise is reserved for per-project language runtimes plus git-tool (which has
-# no Homebrew formula). Everything else lives in ~/.Brewfile.
+# mise is reserved for the language runtimes. Everything else comes from a
+# native package manager; the few tools with no Linux package are in
+# conf.d/linux.toml.
 
 [tools]
 deno = "latest"

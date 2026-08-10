@@ -3,6 +3,14 @@
 # PATH additions and env vars (VAULT_ADDR, GITTOOL_CONFIG, ~/.cargo/bin, …)
 # come from mise — see ~/.config/mise/config.toml.
 
+{{ if eq .chezmoi.os "darwin" -}}
+# Homebrew's prefix isn't on the default macOS PATH, so everything below it
+# (mise, starship, atuin, …) has to be put there first.
+if test -x /opt/homebrew/bin/brew
+    /opt/homebrew/bin/brew shellenv fish | source
+end
+
+{{ end -}}
 # Tool versions, PATH and env vars
 if type -q mise
     mise activate fish | source

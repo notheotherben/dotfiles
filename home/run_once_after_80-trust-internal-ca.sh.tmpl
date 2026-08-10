@@ -19,12 +19,12 @@ sudo security add-trusted-cert -d -r trustRoot -k "$keychain" "$cert"
 {{ else -}}
 anchor="/etc/ca-certificates/trust-source/anchors/sierrasoftworks-internal.crt"
 
-if [ -f "$anchor" ]; then
+if cmp -s "$cert" "$anchor"; then
   echo "==> Internal CA already trusted"
   exit 0
 fi
 
 echo "==> Trusting internal CA ($cn) — you'll be prompted for your password"
-sudo cp "$cert" "$anchor"
-sudo trust extract-compat
+sudo install -m 0644 "$cert" "$anchor"
+sudo update-ca-trust
 {{ end -}}

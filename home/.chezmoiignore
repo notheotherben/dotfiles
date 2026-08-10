@@ -1,11 +1,14 @@
 {{ if ne .chezmoi.os "darwin" -}}
+.Brewfile
 Library
 Library/**
-.config/rustic
-.config/rustic/**
 {{ else -}}
 .config/Yubico
 .config/Yubico/**
 .config/hypr
 .config/hypr/**
+.config/systemd
+.config/systemd/**
+.config/mise/conf.d
+.config/mise/conf.d/**
 {{ end -}}
