@@ -5,6 +5,6 @@
 # AUR package, so mise is the only option on Linux.
 
 [tools]
-"ubi:SierraSoftworks/git-tool" = "latest"
-"ubi:SierraSoftworks/shig" = "latest"
-"ubi:SierraSoftworks/tailservice" = "latest"
+"github:SierraSoftworks/git-tool" = "latest"
+"github:SierraSoftworks/shig" = "latest"
+"github:SierraSoftworks/tailservice" = "latest"

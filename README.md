@@ -120,4 +120,4 @@ re-run whenever the thing they manage changes.
 - `programs.{git,starship,fish,zsh}` → dotfiles under `home/`.
 - `system.defaults` / `security.pam` / `security.pki` → `run_*` scripts.
 - `launchd.agents.rustic-backup` → managed LaunchAgent plist + reload script.
-- `git-tool` flake input → mise `ubi:SierraSoftworks/git-tool`.
+- `git-tool` flake input → mise `github:SierraSoftworks/git-tool`.
