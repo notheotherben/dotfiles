@@ -15,7 +15,27 @@ if ! grep -qx "$fish_path" /etc/shells; then
   echo "$fish_path" | sudo tee -a /etc/shells >/dev/null
 fi
 
-if [ "${SHELL:-}" != "$fish_path" ]; then
-  echo "==> Setting default shell to fish"
-  chsh -s "$fish_path"
+user="$(id -un)"
+{{ if eq .chezmoi.os "darwin" -}}
+current_shell="$(dscl . -read "/Users/$user" UserShell | awk '{print $2}')"
+{{ else -}}
+current_shell="$(getent passwd "$user" | cut -d: -f7)"
+{{ end }}
+# /bin/fish and /usr/bin/fish are the same binary on Arch.
+if [ "$(readlink -f "$current_shell" 2>/dev/null)" = "$(readlink -f "$fish_path")" ]; then
+  echo "==> fish is already the default shell"
+  exit 0
 fi
+
+echo "==> Setting default shell to fish"
+{{ if eq .chezmoi.os "darwin" -}}
+chsh -s "$fish_path"
+{{ else -}}
+if grep -q "^$user:" /etc/passwd; then
+  chsh -s "$fish_path"
+else
+  # systemd-homed (and other non-local) accounts have no /etc/passwd entry, so
+  # chsh refuses with "can only change local entries".
+  homectl update "$user" --shell="$fish_path"
+fi
+{{ end -}}
