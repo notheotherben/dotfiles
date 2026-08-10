@@ -8,8 +8,6 @@ set -eu
 
 # Official repositories (incl. the CachyOS overlays).
 pacman_packages="
-  1password
-  1password-cli
   android-tools
   ansible
   atuin
@@ -46,7 +44,10 @@ pacman_packages="
 "
 
 # AUR — no official repository package exists for these.
+# 1password ships op-ssh-sign (git signing); 1password-cli ships `op`.
 aur_packages="
+  1password
+  1password-cli
   grpcurl
   nomad-pack
   powershell-bin
