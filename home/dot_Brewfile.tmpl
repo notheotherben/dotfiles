@@ -1,13 +1,22 @@
 # Homebrew Bundle manifest — deployed by chezmoi to ~/.Brewfile
 #
 #   Apply with:  brew bundle --global
-#   Edit via:    chezmoi edit ~/.Brewfile   (source: home/dot_Brewfile)
+#   Edit via:    chezmoi edit ~/.Brewfile   (source: home/dot_Brewfile.tmpl)
 #
 # Language runtimes (node, go, deno) are
 # managed by mise instead — see ~/.config/mise/config.toml.
+#
+# On Linux, Homebrew is reserved for the Sierra Softworks tap (nothing else
+# packages it); the rest comes from pacman/AUR/flatpak — see
+# run_onchange_after_15-arch-packages.sh.tmpl.
 
-tap "hashicorp/tap"
 tap "sierrasoftworks/tap"
+
+brew "sierrasoftworks/tap/git-tool"
+brew "sierrasoftworks/tap/shig"
+brew "sierrasoftworks/tap/tailservice"
+{{ if eq .chezmoi.os "darwin" }}
+tap "hashicorp/tap"
 
 brew "mise"                    # language runtimes
 brew "chezmoi"                 # this dotfiles manager
@@ -55,7 +64,4 @@ brew "hashicorp/tap/nomad"
 brew "hashicorp/tap/nomad-pack"
 brew "hashicorp/tap/terraform"
 brew "hashicorp/tap/vault"
-
-brew "sierrasoftworks/tap/git-tool"
-brew "sierrasoftworks/tap/shig"
-brew "sierrasoftworks/tap/tailservice"
+{{ end -}}

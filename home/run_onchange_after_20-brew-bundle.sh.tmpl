@@ -2,16 +2,16 @@
 # Install/upgrade everything in ~/.Brewfile. Re-runs automatically whenever the
 # Brewfile changes (the hash below forces chezmoi to detect the change).
 #
-# Brewfile hash: {{ include "dot_Brewfile" | sha256sum }}
+# Brewfile hash: {{ include "dot_Brewfile.tmpl" | sha256sum }}
 set -eu
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$({{ if eq .chezmoi.os "darwin" }}/opt/homebrew{{ else }}/home/linuxbrew/.linuxbrew{{ end }}/bin/brew shellenv)"
 
 echo "==> brew update"
 brew update
-
+{{ if eq .chezmoi.os "darwin" }}
 echo "==> brew trust hashicorp/tap"
 brew trust hashicorp/tap
-
+{{ end }}
 echo "==> brew bundle (~/.Brewfile)"
 brew bundle --global --no-upgrade

@@ -1,0 +1,100 @@
+#!/bin/sh
+# Arch/CachyOS package manifest — the Linux counterpart to ~/.Brewfile.
+# Anything available from pacman, the AUR, or Flathub is installed here rather
+# than through Homebrew; only the Sierra Softworks tap is left to brew bundle.
+# Re-runs whenever the lists below change.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+
+# Official repositories (incl. the CachyOS overlays).
+pacman_packages="
+  1password
+  1password-cli
+  android-tools
+  ansible
+  atuin
+  azure-cli
+  caddy
+  cargo-binstall
+  chezmoi
+  claude-code
+  docker
+  docker-buildx
+  docker-compose
+  dotnet-sdk-10.0
+  firefox
+  fish
+  git
+  jq
+  mise
+  nomad
+  protobuf
+  rustic
+  rustup
+  shellcheck
+  signal-desktop
+  speedtest-cli
+  starship
+  tailscale
+  terraform
+  uv
+  vault
+  vim
+  xh
+  zed
+  zsh-syntax-highlighting
+"
+
+# AUR — no official repository package exists for these.
+aur_packages="
+  grpcurl
+  nomad-pack
+  powershell-bin
+  synology-drive
+"
+
+# Flathub — desktop apps with no maintained native package.
+flatpak_packages="
+  com.fastmail.Fastmail
+  com.rtosta.zapzap
+  com.spotify.Client
+  com.todoist.Todoist
+  org.telegram.desktop
+"
+
+# macOS-only, deliberately not replaced here:
+#   little-snitch  -> no equivalent (opensnitch in the AUR is the closest)
+#   orbstack       -> Docker runs natively (docker/docker-compose above)
+
+echo "==> pacman"
+# shellcheck disable=SC2086
+sudo pacman -S --needed --noconfirm $pacman_packages
+
+aur_helper=""
+for candidate in paru yay; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    aur_helper="$candidate"
+    break
+  fi
+done
+
+if [ -n "$aur_helper" ]; then
+  echo "==> $aur_helper (AUR)"
+  # shellcheck disable=SC2086
+  "$aur_helper" -S --needed --noconfirm $aur_packages
+else
+  echo "!! no AUR helper (paru/yay) found — skipping:$aur_packages"
+fi
+
+if command -v flatpak >/dev/null 2>&1; then
+  echo "==> flatpak"
+  sudo flatpak remote-add --if-not-exists --system \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  # shellcheck disable=SC2086
+  sudo flatpak install --system --noninteractive --or-update flathub $flatpak_packages
+else
+  echo "!! flatpak not installed — skipping:$flatpak_packages"
+fi
+{{ else -}}
+exit 0
+{{ end -}}

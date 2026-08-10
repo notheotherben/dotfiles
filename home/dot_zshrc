@@ -26,9 +26,16 @@ if command -v git-tool >/dev/null 2>&1; then
 fi
 
 # Syntax highlighting (must be sourced last)
-if [ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
-  source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-fi
+for zsh_hl in \
+  /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+  /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+do
+  if [ -f "$zsh_hl" ]; then
+    source "$zsh_hl"
+    break
+  fi
+done
+unset zsh_hl
 
 # Aliases
 alias gt='git-tool'

@@ -1,13 +1,19 @@
 # dotfiles
 
-Personal macOS developer-machine configuration, built on **Homebrew + chezmoi +
-mise-en-place** (the successor to my old Nix / nix-darwin / home-manager setup).
+Personal developer-machine configuration for **macOS** and **CachyOS/Arch**,
+built on **chezmoi + mise-en-place** (the successor to my old Nix / nix-darwin /
+home-manager setup).
 
-| Concern | Tool |
-| --- | --- |
-| GUI apps, system services, most CLIs | Homebrew (`~/.Brewfile`) |
-| Language runtimes + `git-tool` | mise (`~/.config/mise/config.toml`) |
-| Dotfiles, macOS defaults, LaunchAgents, one-off setup | chezmoi (this repo) |
+| Concern | macOS | Linux |
+| --- | --- | --- |
+| GUI apps, system services, most CLIs | Homebrew (`~/.Brewfile`) | pacman / AUR / Flathub |
+| Tools with no native package (`git-tool`, `shig`, `tailservice`) | Homebrew (`sierrasoftworks/tap`) | Homebrew (`sierrasoftworks/tap`) |
+| Language runtimes | mise (`~/.config/mise/config.toml`) | mise |
+| Dotfiles, OS defaults, LaunchAgents, one-off setup | chezmoi (this repo) | chezmoi (this repo) |
+
+On Linux, Homebrew is deliberately limited to the Sierra Softworks tap —
+anything that pacman, the AUR, or Flathub provides is installed from there
+instead. See [home/run_onchange_after_15-arch-packages.sh.tmpl](home/run_onchange_after_15-arch-packages.sh.tmpl).
 
 ## Bootstrap a fresh machine
 
@@ -20,7 +26,8 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply notheotherben/dotfiles
 # 2. Open a new shell (fish is now the default login shell).
 ```
 
-On Apple Silicon Homebrew lives at `/opt/homebrew`; the scripts assume that prefix.
+On Apple Silicon Homebrew lives at `/opt/homebrew`; on Linux at
+`/home/linuxbrew/.linuxbrew`. The scripts assume those prefixes.
 
 ## Day-to-day
 
@@ -38,7 +45,8 @@ chezmoi update               # git pull + apply
 ```
 .chezmoiroot                 -> "home" (chezmoi source root is home/)
 home/
-  dot_Brewfile               -> ~/.Brewfile          (Homebrew manifest)
+  .chezmoiignore             macOS-only targets are skipped on Linux
+  dot_Brewfile.tmpl          -> ~/.Brewfile          (Homebrew manifest)
   dot_gitconfig              -> ~/.gitconfig
   dot_zshrc                  -> ~/.zshrc
   dot_config/
@@ -48,12 +56,13 @@ home/
     certs/…                  -> internal CA bundle
   Library/LaunchAgents/…     -> ~/Library/LaunchAgents/dev.pannell.rustic-backup.plist
   run_once_before_10-install-homebrew.sh   bootstrap Homebrew
+  run_onchange_after_15-arch-packages.sh   pacman / AUR / flatpak   (Linux)
   run_onchange_after_20-brew-bundle.sh     brew bundle --global
   run_onchange_after_30-mise-install.sh    mise install
-  run_onchange_after_40-macos-defaults.sh  Finder / global defaults
-  run_once_after_50-touchid-sudo.sh        Touch ID for sudo
+  run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
+  run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
   run_once_after_60-default-shell.sh       chsh to fish
-  run_onchange_after_70-rustic-launchagent.sh  (re)load backup agent
+  run_onchange_after_70-rustic-launchagent.sh  (re)load backup agent (macOS)
   run_once_after_80-trust-internal-ca.sh   trust internal CA
 ```
 
@@ -64,10 +73,15 @@ re-run whenever the thing they manage changes.
 
 - **1Password** is installed manually (latest beta) so `op` and `op-ssh-sign`
   (git commit signing) are available. Brewfile entries are commented out.
+  On Linux the `1password` / `1password-cli` AUR packages provide both.
 - **rustic backup** expects its config at `~/.config/rustic`; the LaunchAgent
-  runs `rustic backup` hourly. Create that config separately.
+  runs `rustic backup` hourly. Create that config separately. macOS only —
+  the config and LaunchAgent are ignored on Linux.
 - The Touch ID, default-shell, and CA-trust scripts call `sudo` and will prompt
-  for your password on first apply.
+  for your password on first apply. On Linux the pacman/AUR/flatpak script does
+  too.
+- No Linux equivalent is installed for `little-snitch`; `orbstack` is replaced
+  by a native `docker` install.
 
 ## What changed from Nix
 

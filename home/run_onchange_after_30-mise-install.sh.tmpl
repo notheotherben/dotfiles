@@ -5,7 +5,8 @@
 # mise config hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
 set -eu
 
+{{ if eq .chezmoi.os "darwin" -}}
 eval "$(/opt/homebrew/bin/brew shellenv)"
-
+{{ end }}
 echo "==> mise install"
 mise install --yes

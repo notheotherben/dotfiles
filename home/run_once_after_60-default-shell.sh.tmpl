@@ -3,10 +3,10 @@
 # Requires sudo to register fish in /etc/shells.
 set -eu
 
-fish_path="/opt/homebrew/bin/fish"
+fish_path="{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/fish{{ else }}/usr/bin/fish{{ end }}"
 
 if [ ! -x "$fish_path" ]; then
-  echo "!! fish not found at $fish_path — skipping (brew bundle should install it)"
+  echo "!! fish not found at $fish_path — skipping ({{ if eq .chezmoi.os "darwin" }}brew bundle{{ else }}pacman{{ end }} should install it)"
   exit 0
 fi
 

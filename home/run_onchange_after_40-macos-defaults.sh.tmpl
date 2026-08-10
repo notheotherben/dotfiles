@@ -1,6 +1,7 @@
 #!/bin/sh
 # macOS system defaults. Ported from the old nix system.defaults.finder.* block.
 # Re-runs whenever this script changes.
+{{ if eq .chezmoi.os "darwin" -}}
 set -eu
 
 echo "==> Applying macOS defaults"
@@ -15,3 +16,6 @@ defaults write com.apple.finder CreateDesktop -bool false
 defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 
 killall Finder 2>/dev/null || true
+{{ else -}}
+exit 0
+{{ end -}}
