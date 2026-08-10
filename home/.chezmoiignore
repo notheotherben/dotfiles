@@ -6,4 +6,6 @@ Library/**
 {{ else -}}
 .config/Yubico
 .config/Yubico/**
+.config/hypr
+.config/hypr/**
 {{ end -}}

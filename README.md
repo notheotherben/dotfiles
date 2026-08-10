@@ -52,6 +52,7 @@ home/
   dot_config/
     fish/config.fish         -> ~/.config/fish/config.fish
     ghostty/config           -> ~/.config/ghostty/config
+    hypr/config/…            -> ~/.config/hypr/config/…       (Linux)
     starship.toml            -> ~/.config/starship.toml
     mise/config.toml         -> ~/.config/mise/config.toml
     Yubico/u2f_keys          -> ~/.config/Yubico/u2f_keys  (from 1Password, Linux)
