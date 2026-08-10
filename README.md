@@ -51,8 +51,10 @@ home/
   dot_zshrc                  -> ~/.zshrc
   dot_config/
     fish/config.fish         -> ~/.config/fish/config.fish
+    ghostty/config           -> ~/.config/ghostty/config
     starship.toml            -> ~/.config/starship.toml
     mise/config.toml         -> ~/.config/mise/config.toml
+    Yubico/u2f_keys          -> ~/.config/Yubico/u2f_keys  (from 1Password, Linux)
     certs/…                  -> internal CA bundle
   Library/LaunchAgents/…     -> ~/Library/LaunchAgents/dev.pannell.rustic-backup.plist
   run_once_before_10-install-homebrew.sh   bootstrap Homebrew
@@ -60,6 +62,7 @@ home/
   run_onchange_after_20-brew-bundle.sh     brew bundle --global
   run_onchange_after_30-mise-install.sh    mise install
   run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
+  run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit (Linux)
   run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
   run_once_after_60-default-shell.sh       chsh to fish
   run_onchange_after_70-rustic-launchagent.sh  (re)load backup agent (macOS)
@@ -82,6 +85,12 @@ re-run whenever the thing they manage changes.
   too.
 - No Linux equivalent is installed for `little-snitch`; `orbstack` is replaced
   by a native `docker` install.
+- **Yubikey / pam_u2f** (Linux) is the counterpart to Touch ID: it adds a
+  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}`. Login/SDDM are
+  deliberately excluded because systemd-homed needs the password to unlock the
+  home area. The credential mapping comes from the `u2f_keys` field on the
+  "CachyOS" 1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
+  -i pam://$(hostname)` and update that field.
 
 ## What changed from Nix
 

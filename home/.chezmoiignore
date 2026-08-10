@@ -3,4 +3,7 @@ Library
 Library/**
 .config/rustic
 .config/rustic/**
+{{ else -}}
+.config/Yubico
+.config/Yubico/**
 {{ end -}}

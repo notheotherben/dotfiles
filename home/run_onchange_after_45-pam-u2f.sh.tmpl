@@ -1,0 +1,52 @@
+#!/bin/sh
+# Let a Yubikey stand in for the password on sudo, su, and polkit prompts.
+# The credentials themselves live in ~/.config/Yubico/u2f_keys.
+#
+# Deliberately not applied to login/sddm/greetd: this account is managed by
+# systemd-homed, which needs the password to unlock the home area at login.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+
+module="/usr/lib/security/pam_u2f.so"
+
+# origin/appid must match what pamu2fcfg recorded in ~/.config/Yubico/u2f_keys.
+u2f_rule="auth        sufficient  pam_u2f.so cue origin=pam://{{ .chezmoi.hostname }} appid=pam://{{ .chezmoi.hostname }} pinverification=1 userverification=0 userpresence=0"
+
+if [ ! -f "$module" ]; then
+  echo "!! $module not found — skipping (pacman should install pam-u2f)"
+  exit 0
+fi
+
+for service in sudo su su-l polkit-1; do
+  file="/etc/pam.d/$service"
+  [ -f "$file" ] || continue
+
+  if grep -q '^[[:space:]]*auth.*pam_u2f\.so' "$file"; then
+    continue
+  fi
+
+  echo "==> Adding pam_u2f to $file"
+  tmp="$(mktemp)"
+  # Insert ahead of the first real auth rule, but leave pam_rootok's
+  # short-circuit for root in place.
+  awk -v rule="$u2f_rule" '
+    !inserted && /^[[:space:]]*auth/ && $0 !~ /pam_rootok\.so/ {
+      print rule
+      inserted = 1
+    }
+    { print }
+  ' "$file" >"$tmp"
+
+  if ! grep -q 'pam_u2f\.so' "$tmp"; then
+    echo "!! refusing to rewrite $file — no auth rule to insert before"
+    rm -f "$tmp"
+    continue
+  fi
+
+  sudo cp -n "$file" "$file.preu2f.bak"
+  sudo install -m 0644 -o root -g root "$tmp" "$file"
+  rm -f "$tmp"
+done
+{{ else -}}
+exit 0
+{{ end -}}
