@@ -1,0 +1,30 @@
+#!/bin/sh
+# (Re)load the hourly rustic backup job whenever its definition changes.
+# Ported from extras/rustic.nix.
+{{ if eq .chezmoi.os "darwin" -}}
+#
+# plist hash: {{ include "Library/LaunchAgents/dev.pannell.rustic-backup.plist.tmpl" | sha256sum }}
+set -eu
+
+label="dev.pannell.rustic-backup"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+domain="gui/$(id -u)"
+
+mkdir -p "$HOME/Library/Logs"
+
+echo "==> Reloading LaunchAgent $label"
+launchctl bootout "$domain/$label" 2>/dev/null || true
+launchctl bootstrap "$domain" "$plist"
+{{ else -}}
+#
+# unit hash: {{ include "dot_config/systemd/user/rustic-backup.service" | sha256sum }}
+# unit hash: {{ include "dot_config/systemd/user/rustic-backup.timer" | sha256sum }}
+set -eu
+
+echo "==> Reloading rustic-backup.timer"
+systemctl --user daemon-reload
+systemctl --user enable --now rustic-backup.timer
+
+# Survive logout so hourly backups still run on a locked/headless session.
+loginctl enable-linger "$(id -un)" 2>/dev/null || true
+{{ end -}}

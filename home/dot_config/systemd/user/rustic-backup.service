@@ -1,0 +1,12 @@
+[Unit]
+Description=rustic backup
+Documentation=https://rustic.cli.rs/
+RequiresMountsFor=/backup
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/.config/rustic
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=rustic backup
+Nice=10
+IOSchedulingClass=idle

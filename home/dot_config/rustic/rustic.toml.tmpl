@@ -1,13 +1,21 @@
 {{- with $root := . }}
 {{- with $details := onepasswordDetailsFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
 {{- with $fields := onepasswordItemFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
+{{- /* macOS mounts the SMB share under /Volumes via osascript; on Linux fstab
+       mounts it at /backup on boot, so the hook only asserts it's there. */ -}}
+{{- $mount := printf "/Volumes/%s" $fields.volume.value -}}
+{{- $mountCmd := printf "osascript -e 'mount volume \"smb://%s@%s/%s\"'" $details.username.value $fields.server.value $fields.volume.value -}}
+{{- if ne $root.chezmoi.os "darwin" -}}
+{{- $mount = "/backup" -}}
+{{- $mountCmd = printf "mountpoint -q %s" $mount -}}
+{{- end -}}
 [global]
 opentelemetry = "{{ $fields.telemetry.value }}/v1/metrics"
 
 [global.hooks]
 run-before = [
   "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=running&token={{ $fields.cron_token.value }}",
-  "osascript -e 'mount volume \"smb://{{- $details.username.value -}}@{{- $fields.server.value -}}/{{- $fields.volume.value -}}\"'"
+  {{ $mountCmd | toJson }}
 ]
 run-after = [
   "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=succeeded&token={{ $fields.cron_token.value }}"
@@ -17,7 +25,7 @@ run-failed = [
 ]
 
 [repository]
-repository = '/Volumes/{{- $fields.volume.value -}}/'
+repository = '{{ $mount }}/'
 password = '{{- $fields.encryption.value -}}'
 
 [snapshot-filter]
@@ -34,7 +42,7 @@ metrics-job = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 "host.name" = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 
 [[backup.snapshots]]
-sources = ['/Users/{{- $root.chezmoi.username -}}/']
+sources = ['{{ $root.chezmoi.homeDir }}/']
 
 [forget]
 filter-hosts = ["{{ $root.chezmoi.hostname }}", "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"]

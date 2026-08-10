@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly rustic backup
+
+[Timer]
+OnCalendar=hourly
+# Catch up after the machine has been asleep, matching launchd's behaviour.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
