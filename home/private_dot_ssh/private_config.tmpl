@@ -1,0 +1,13 @@
+# ssh config — deployed by chezmoi to ~/.ssh/config
+# The 1Password SSH agent socket lives in a different place on each platform.
+{{ if eq .chezmoi.os "darwin" -}}
+Include ~/.orbstack/ssh/config
+
+{{ end -}}
+Host *
+	IdentityAgent "{{ if eq .chezmoi.os "darwin" }}~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock{{ else }}~/.1password/agent.sock{{ end }}"
+
+Host nas
+	User notheotherben
+	SetEnv TERM=xterm-256color
+	HostName nas.raptor-perch.ts.net
