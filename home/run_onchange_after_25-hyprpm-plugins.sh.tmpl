@@ -6,7 +6,8 @@
 set -eu
 
 plugin_repo="https://github.com/hyprwm/hyprland-plugins"
-plugins="hyprbars"
+plugins=""
+plugins_disable="hyprbars"
 
 if ! command -v hyprpm >/dev/null 2>&1 || [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
     echo "No Hyprland session detected, skipping hyprpm plugin setup."
@@ -20,6 +21,10 @@ hyprpm list | grep -q "$(basename "$plugin_repo")" || hyprpm add "$plugin_repo"
 
 for plugin in $plugins; do
     hyprpm enable "$plugin"
+done
+
+for plugin in $plugins_disable; do
+    hyprpm disable "$plugin"
 done
 
 hyprpm reload
