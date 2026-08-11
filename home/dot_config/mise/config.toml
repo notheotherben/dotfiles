@@ -12,7 +12,6 @@ go = "latest"
 node = "lts"
 
 [env]
-GITTOOL_CONFIG = "{{env.HOME}}/dev/git-tool.yml"
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"
 VAULT_ADDR = "https://vault.sierrasoftworks.com"
 VAULT_SSH_ROLE = "admin"
