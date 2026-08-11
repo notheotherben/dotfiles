@@ -1,3 +1,7 @@
 confirm-close-surface = false
 window-padding-x = 5
 shell-integration-features = true
+
+# Ctrl+C/Ctrl+V belong to the shell, so copy/paste lives on Ctrl+Shift.
+keybind = ctrl+shift+c=copy_to_clipboard:mixed
+keybind = ctrl+shift+v=paste_from_clipboard
