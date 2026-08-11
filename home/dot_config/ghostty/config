@@ -5,3 +5,7 @@ shell-integration-features = true
 # Ctrl+C/Ctrl+V belong to the shell, so copy/paste lives on Ctrl+Shift.
 keybind = ctrl+shift+c=copy_to_clipboard:mixed
 keybind = ctrl+shift+v=paste_from_clipboard
+
+{{ if eq .chezmoi.os "linux" -}}
+theme = "noctalia"
+{{ end -}}

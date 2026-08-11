@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://schemas.sierrasoftworks.com/git-tool/v2/config.schema.json
 $schema: https://schemas.sierrasoftworks.com/git-tool/v2/config.schema.json
-directory: "{{env.HOME}}/dev"
-scratchpads: "{{env.HOME}}/scratch"
-worktrees: "{{env.HOME}}/worktrees"
+directory: "{{ .chezmoi.homeDir }}/dev"
+scratchpads: "{{ .chezmoi.homeDir }}/scratch"
+worktrees: "{{ .chezmoi.homeDir }}/worktrees"
 services:
 - name: gh
   website: https://github.com/{{ "{{ .Repo.FullName }}" }}
@@ -30,7 +30,7 @@ apps:
   args:
   - -a
   - Finder
-  - '{{ .Target.Path }}'
+  - '{{ "{{ .Target.Path }}" }}'
 {{- end }}
 aliases: {}
 trusted_repos: {}

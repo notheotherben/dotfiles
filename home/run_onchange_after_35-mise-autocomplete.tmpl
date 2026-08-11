@@ -11,4 +11,4 @@ set -eu
 eval "$(/opt/homebrew/bin/brew shellenv)"
 {{ end }}
 echo "==> mise completion fish"
-mise completion fish > "{{ env.HOME }}/.config/fish/completions/mise.fish"
+mise completion fish > "{{ .chezmoi.homeDir }}/.config/fish/completions/mise.fish"
