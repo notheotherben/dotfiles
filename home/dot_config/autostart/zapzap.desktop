@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ZapZap
+Comment=WhatsApp client, placed on the communication scratchpad by Hyprland
+Exec=flatpak run com.rtosta.zapzap
+Terminal=false
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Fastmail
+Comment=Placed on the communication scratchpad by Hyprland
+Exec=flatpak run com.fastmail.Fastmail
+Terminal=false
+X-GNOME-Autostart-enabled=true

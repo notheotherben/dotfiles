@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Coding Reference Workspace
+Comment=Launched as one sequenced entry so Firefox reliably takes the left column on workspace 4
+Exec=sh -c "firefox & sleep 4; exec flatpak run com.todoist.Todoist"
+Terminal=false
+X-GNOME-Autostart-enabled=true

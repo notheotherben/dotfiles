@@ -5,6 +5,8 @@ Library/**
 {{ else -}}
 .config/Yubico
 .config/Yubico/**
+.config/autostart
+.config/autostart/**
 .config/hypr
 .config/hypr/**
 .config/systemd

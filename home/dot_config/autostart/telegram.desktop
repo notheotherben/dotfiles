@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Telegram
+Comment=Placed on the communication scratchpad by Hyprland
+Exec=flatpak run org.telegram.desktop
+Terminal=false
+X-GNOME-Autostart-enabled=true

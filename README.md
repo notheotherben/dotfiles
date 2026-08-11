@@ -62,6 +62,7 @@ home/
   dot_Brewfile               -> ~/.Brewfile          (Homebrew manifest, macOS)
   dot_zshrc                  -> ~/.zshrc
   dot_config/
+    autostart/….desktop      -> ~/.config/autostart/…         (XDG autostart, Linux)
     fish/config.fish.tmpl    -> ~/.config/fish/config.fish
     ghostty/config           -> ~/.config/ghostty/config
     git/config.tmpl          -> ~/.config/git/config         (per-OS op-ssh-sign)
@@ -112,6 +113,13 @@ re-run whenever the thing they manage changes.
   home area. The credential mapping comes from the `u2f_keys` field on the
   "CachyOS" 1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
   -i pam://$(hostname)` and update that field.
+- **Hyprland** is loaded by `~/.config/hypr/hyprland.lua`, which ships with
+  CachyOS and is *not* managed here. The files under `hypr/config/` are forks of
+  the CachyOS defaults, so upstream changes to those specific files no longer
+  reach this machine. The unforked ones (`animations`, `autostart`, `colors`,
+  `decorations`, `environment`, `inputs`) are still owned by CachyOS.
+  Autostart uses XDG `.desktop` entries rather than `autostart.lua` because the
+  session runs under UWSM.
 
 ## What changed from Nix
 

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Spotify
+Comment=Starts minimised to the tray
+Exec=flatpak run com.spotify.Client --minimized
+Terminal=false
+X-GNOME-Autostart-enabled=true
