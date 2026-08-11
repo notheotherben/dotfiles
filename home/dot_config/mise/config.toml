@@ -10,7 +10,6 @@
 deno = "latest"
 go = "latest"
 node = "lts"
-rust = "latest"
 
 [env]
 GITTOOL_CONFIG = "{{env.HOME}}/dev/git-tool.yml"
