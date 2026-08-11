@@ -139,6 +139,6 @@ hl.bind(mainMod .. " + CONTROL + Left",        hl.dsp.focus({ workspace = "m-1" 
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.window.move({ workspace = "special" }))
 hl.bind(mainMod .. " + K",         hl.dsp.workspace.toggle_special())
 
--- Communication scratchpad (2x2 grid on MONITOR2, see windowrules.lua)
+-- Communication scratchpad (equal grid on MONITOR2, see windowrules.lua)
 hl.bind(mainMod .. " + SHIFT + comma", hl.dsp.window.move({ workspace = "special:communication" }))
 hl.bind(mainMod .. " + comma",         hl.dsp.workspace.toggle_special("communication"))

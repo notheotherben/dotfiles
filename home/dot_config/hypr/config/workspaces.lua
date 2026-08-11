@@ -2,6 +2,15 @@
 -- Add your workspace rules here. Increment the workspace number as you go. Do not have duplicate workspaces.
 
 -- 1 and 4 are the defaults for their monitors, so both come up together at login.
+hl.layout.register("communication-grid", {
+    recalculate = function(ctx)
+        local columns = math.ceil(math.sqrt(#ctx.targets))
+        for index, target in ipairs(ctx.targets) do
+            target:place(ctx:grid_cell(index, columns))
+        end
+    end,
+})
+
 hl.workspace_rule({ workspace = "1", monitor = MONITOR1, default = true, persistent = true, decorate = true, default_name = "coding" })
 hl.workspace_rule({ workspace = "2", monitor = MONITOR1, layout = "scrolling" })
 hl.workspace_rule({ workspace = "3", monitor = MONITOR1, persistent = true })
@@ -9,7 +18,7 @@ hl.workspace_rule({ workspace = "4", monitor = MONITOR2, default = true, persist
 hl.workspace_rule({ workspace = "5", monitor = MONITOR2 })
 
 hl.workspace_rule({ workspace = "name:gaming", monitor = PRIMARY_MONITOR, decorate = false })
-hl.workspace_rule({ workspace = "special:communication", monitor = MONITOR2 })
+hl.workspace_rule({ workspace = "special:communication", monitor = MONITOR2, layout = "lua:communication-grid" })
 
 -- Dwindle has no per-workspace split ratio, so the two-column workspaces are
 -- sized from events instead: the listed window is squeezed to `fraction` of the

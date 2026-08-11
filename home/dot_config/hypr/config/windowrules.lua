@@ -119,22 +119,17 @@ hl.window_rule({
 -- event handler in workspaces.lua.
 hl.window_rule({ match = { class = "^(todoist)$" }, workspace = "4" })
 
--- Communication scratchpad: 2x2 grid on MONITOR2, toggled with SUPER + comma.
--- Floated with explicit geometry because no layout produces a deterministic 2x2.
--- Bump the y values if the top row ends up behind the bar.
-local commsGrid = {
-    { class = "^(com\\.rtosta\\.zapzap)$",     x = "10",              y = "10" },
-    { class = "^(org\\.telegram\\.desktop)$",  x = "10",              y = "monitor_h*0.5+5" },
-    { class = "^(com\\.fastmail\\.Fastmail)$", x = "monitor_w*0.5+5", y = "10" },
-    { class = "^(signal.*)$",                  x = "monitor_w*0.5+5", y = "monitor_h*0.5+5" },
+-- Communication scratchpad: four tiled windows on MONITOR2, toggled with SUPER + comma.
+local commsApps = {
+    "^(com\\.rtosta\\.zapzap)$",
+    "^(org\\.telegram\\.desktop)$",
+    "^(com\\.fastmail\\.Fastmail)$",
+    "^(signal.*)$",
 }
-for _, app in ipairs(commsGrid) do
+for _, class in ipairs(commsApps) do
     hl.window_rule({
-        match            = { class = app.class },
+        match            = { class = class },
         workspace        = "special:communication silent",
-        float            = true,
         no_initial_focus = true,
-        size             = { "monitor_w*0.5-15", "monitor_h*0.5-15" },
-        move             = { app.x, app.y },
     })
 end
