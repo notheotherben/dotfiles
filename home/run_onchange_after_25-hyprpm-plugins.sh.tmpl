@@ -1,0 +1,26 @@
+#!/bin/sh
+# Hyprland plugins, built and enabled with hyprpm.
+# hyprpm compiles against the running compositor, so this only works inside a
+# Hyprland session and is skipped everywhere else.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+
+plugin_repo="https://github.com/hyprwm/hyprland-plugins"
+plugins="hyprbars"
+
+if ! command -v hyprpm >/dev/null 2>&1 || [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    echo "No Hyprland session detected, skipping hyprpm plugin setup."
+    exit 0
+fi
+
+# Fetches the headers matching the running version; asks for sudo to install them.
+hyprpm update
+
+hyprpm list | grep -q "$(basename "$plugin_repo")" || hyprpm add "$plugin_repo"
+
+for plugin in $plugins; do
+    hyprpm enable "$plugin"
+done
+
+hyprpm reload
+{{ end -}}

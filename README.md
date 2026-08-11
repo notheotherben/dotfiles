@@ -79,6 +79,7 @@ home/
   run_once_before_10-install-homebrew.sh   bootstrap Homebrew       (macOS)
   run_onchange_after_15-arch-packages.sh   pacman / AUR / flatpak   (Linux)
   run_onchange_after_20-brew-bundle.sh     brew bundle --global     (macOS)
+  run_onchange_after_25-hyprpm-plugins.sh  Hyprland plugins         (Linux)
   run_onchange_after_30-mise-install.sh    mise install
   run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
   run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit (Linux)
@@ -119,7 +120,9 @@ re-run whenever the thing they manage changes.
   reach this machine. The unforked ones (`animations`, `autostart`, `colors`,
   `decorations`, `environment`, `inputs`) are still owned by CachyOS.
   Autostart uses XDG `.desktop` entries rather than `autostart.lua` because the
-  session runs under UWSM.
+  session runs under UWSM. The `hyprbars` title bars come from the hyprpm
+  plugin script, which has to run inside a live session and rebuilds the
+  plugin whenever Hyprland is updated.
 
 ## What changed from Nix
 
