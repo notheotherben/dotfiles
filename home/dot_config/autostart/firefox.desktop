@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Firefox
+Comment=Launch Firefox at login
+Exec=firefox
+Terminal=false
+X-GNOME-Autostart-enabled=true

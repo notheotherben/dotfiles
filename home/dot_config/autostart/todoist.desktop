@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Todoist
+Comment=Launch Todoist at login
+Exec=flatpak run com.todoist.Todoist
+Terminal=false
+X-GNOME-Autostart-enabled=true
