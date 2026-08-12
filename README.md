@@ -118,7 +118,7 @@ re-run whenever the thing they manage changes.
   CachyOS and is *not* managed here. The files under `hypr/config/` are forks of
   the CachyOS defaults, so upstream changes to those specific files no longer
   reach this machine. The unforked ones (`animations`, `autostart`, `colors`,
-  `decorations`, `environment`, `inputs`) are still owned by CachyOS.
+  `environment`, `inputs`) are still owned by CachyOS.
   Autostart uses XDG `.desktop` entries rather than `autostart.lua` because the
   session runs under UWSM. The `hyprbars` title bars come from the hyprpm
   plugin script, which has to run inside a live session and rebuilds the
