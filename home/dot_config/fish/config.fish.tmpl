@@ -11,6 +11,9 @@ if test -x /opt/homebrew/bin/brew
 end
 
 {{ end -}}
+# Add ~/.local/bin to PATH for user-installed binaries (e.g. mise, starship, atuin, git-tool, op, but).
+fish_add_path $HOME/.local/bin
+
 # Tool versions, PATH and env vars
 if type -q mise
     mise activate fish | source
@@ -35,6 +38,11 @@ end
 # 1Password CLI completion (op is installed manually — latest beta)
 if type -q op
     op completion fish | source
+end
+
+# Git Butler completions
+if type -q but
+    but completions fish | source
 end
 
 # Enable the use of sudo !! for last command elevation
