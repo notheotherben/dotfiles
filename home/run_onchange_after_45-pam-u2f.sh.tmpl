@@ -2,8 +2,11 @@
 # Let a Yubikey stand in for the password on sudo, su, and polkit prompts.
 # The credentials themselves live in ~/.config/Yubico/u2f_keys.
 #
-# Deliberately not applied to login/sddm/greetd: this account is managed by
-# systemd-homed, which needs the password to unlock the home area at login.
+# Deliberately not applied to greetd/login: this account is managed by
+# systemd-homed, so the password typed at the greeter is what unlocks the LUKS
+# home area. A `sufficient` Yubikey rule there would satisfy PAM without ever
+# reaching pam_systemd_home, and $HOME would stay locked.
+# 47-greetd re-checks that invariant before switching display managers.
 {{ if eq .chezmoi.os "linux" -}}
 set -eu
 

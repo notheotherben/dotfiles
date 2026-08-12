@@ -1,0 +1,175 @@
+#!/bin/sh
+# noctalia-greeter (via greetd) as the login screen, replacing SDDM.
+#
+# Two files are managed here:
+#   /etc/greetd/config.toml                 what greetd launches, and as whom
+#   /var/lib/noctalia-greeter/greeter.toml  the greeter's declarative config
+#
+# greeter.toml is the half of the greeter's config that Sync never writes:
+# `noctalia msg greeter-sync` only touches the sibling sync.toml (wallpaper,
+# palette, output layout), and anything set here wins over it. So the two can
+# coexist — the shell keeps theming the greeter while this file owns behaviour.
+#
+# Runs after 45-pam-u2f so the PAM checks below see the finished stack.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+
+session_bin="/usr/bin/noctalia-greeter-session"
+greeter_user="greeter"
+state_dir="/var/lib/noctalia-greeter"
+
+if [ ! -x "$session_bin" ]; then
+  echo "!! $session_bin not found — skipping (pacman should install noctalia-greeter)"
+  exit 0
+fi
+
+# install(1) refuses a pipe as its source, so stage stdin in a temp file first.
+install_stdin() {
+  owner="$1"
+  dest="$2"
+  tmp="$(mktemp)"
+  cat >"$tmp"
+  sudo install -m 0644 -o "$owner" -g "$owner" "$tmp" "$dest"
+  rm -f "$tmp"
+}
+
+# --------------------------------------------------------------------------
+# PAM sanity checks.
+#
+# greetd authenticates through /etc/pam.d/greetd, and this account lives on
+# systemd-homed: the password typed at the greeter is what unlocks the LUKS
+# home area, so the stack has to reach pam_systemd_home and must *not* let a
+# Yubikey short-circuit it. Getting this wrong locks the machine out at boot,
+# so refuse to switch display managers rather than fix it up silently.
+# --------------------------------------------------------------------------
+pam_file="/etc/pam.d/greetd"
+pam_ok=1
+
+# Follow `include`/`substack` one level at a time so the checks below see the
+# whole chain (greetd -> system-local-login -> system-login -> system-auth).
+pam_stack() {
+  awk '
+    function emit(f,   line, n, parts) {
+      if (seen[f]++) return
+      while ((getline line < f) > 0) {
+        print line
+        n = split(line, parts, /[ \t]+/)
+        if (n >= 3 && (parts[2] == "include" || parts[2] == "substack")) {
+          emit("/etc/pam.d/" parts[3])
+        }
+      }
+      close(f)
+    }
+    BEGIN { emit(ARGV[1]) }
+  ' "$1"
+}
+
+if [ ! -f "$pam_file" ]; then
+  echo "!! $pam_file is missing — greetd is not installed correctly"
+  pam_ok=0
+else
+  stack="$(pam_stack "$pam_file")"
+
+  # A Yubikey `sufficient` rule here would satisfy PAM without ever handing a
+  # password to pam_systemd_home, leaving $HOME locked. 45-pam-u2f never adds
+  # one; this catches a hand-edit or a leftover from a pre-homed setup.
+  if printf '%s\n' "$stack" | grep -qE '^-?[[:space:]]*auth.*pam_u2f\.so'; then
+    echo "!! $pam_file reaches pam_u2f.so in its auth stack."
+    echo "!! systemd-homed needs the real password to unlock ~; remove that rule first."
+    pam_ok=0
+  fi
+
+  # Arch puts pam_systemd_home in system-auth, which greetd inherits via
+  # system-local-login. Without it there is nothing to unlock the home area.
+  if ! printf '%s\n' "$stack" | grep -qE '^-?[[:space:]]*auth.*pam_systemd_home\.so'; then
+    echo "!! $pam_file never reaches pam_systemd_home.so — homed logins would fail."
+    pam_ok=0
+  fi
+
+  # noctalia-greeter's own requirement: greetd has to register a logind session
+  # for the user, otherwise the Hyprland/UWSM session comes up without a seat.
+  if ! grep -qE '^[[:space:]]*session.*pam_(systemd|elogind)\.so' "$pam_file"; then
+    echo "==> Adding pam_systemd session rule to $pam_file"
+    sudo cp -n "$pam_file" "$pam_file.pregreeter.bak"
+    printf 'session    required     pam_systemd.so\n' |
+      sudo tee -a "$pam_file" >/dev/null
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# greetd + greeter configuration.
+# --------------------------------------------------------------------------
+echo "==> Writing /etc/greetd/config.toml"
+sudo mkdir -p /etc/greetd
+sudo cp -n /etc/greetd/config.toml /etc/greetd/config.toml.pregreeter.bak 2>/dev/null || true
+# No `--session` flag: greeter.toml's [session] default already pins it, and
+# keeping it there avoids quoting a name with spaces through greetd's parser.
+printf '%s\n' \
+  '# Managed by chezmoi — see run_onchange_after_47-greetd.sh.tmpl.' \
+  '' \
+  '[terminal]' \
+  'vt = 1' \
+  '' \
+  '[default_session]' \
+  "command = \"$session_bin\"" \
+  "user = \"$greeter_user\"" |
+  install_stdin root /etc/greetd/config.toml
+
+echo "==> Writing $state_dir/greeter.toml"
+sudo install -d -m 0750 -o "$greeter_user" -g "$greeter_user" "$state_dir"
+sudo cp -n "$state_dir/greeter.toml" "$state_dir/greeter.toml.pregreeter.bak" 2>/dev/null || true
+printf '%s\n' \
+  '# Managed by chezmoi — see run_onchange_after_47-greetd.sh.tmpl.' \
+  '# Sync (noctalia msg greeter-sync) writes sync.toml, never this file, and' \
+  '# every key set here wins over the synced value.' \
+  '' \
+  '[auth]' \
+  '# Submitting an empty password hands the conversation back to PAM, which is' \
+  '# how pam_systemd_home gets to prompt for the FIDO2 token PIN instead of the' \
+  '# passphrase. The password still works; this only adds the token as an option.' \
+  'allow_empty_password = true' \
+  '' \
+  '[user]' \
+  'default = "{{ .chezmoi.username }}"' \
+  '' \
+  '[session]' \
+  'default = "Hyprland (uwsm-managed)"' \
+  '' \
+  '[idle]' \
+  '# OLED burn-in protection. The greeter never blanks by default, and a login' \
+  '# screen can sit untouched for hours; drop DRM output after a minute idle.' \
+  'timeout = 60' \
+  '' \
+  '[keyboard]' \
+  '# greetd starts greeters with an empty environment, so XKB_DEFAULT_LAYOUT' \
+  '# from the session is not visible here and the layout has to be spelled out.' \
+  'layout = "us"' |
+  install_stdin "$greeter_user" "$state_dir/greeter.toml"
+
+# No [cursor] block on purpose: Bibata-Modern-Ice is only installed under
+# ~/.local/share/icons, which lives inside the encrypted home the greeter is
+# there to unlock. wlroots' built-in cursor is used instead.
+
+# --------------------------------------------------------------------------
+# Display manager switch.
+# --------------------------------------------------------------------------
+if [ "$pam_ok" -ne 1 ]; then
+  echo "!! Leaving the current display manager enabled until the PAM issues above are fixed."
+  exit 0
+fi
+
+if [ "$(systemctl is-enabled greetd.service 2>/dev/null || true)" = "enabled" ]; then
+  echo "==> greetd is already the display manager"
+  exit 0
+fi
+
+# Order matters: disabling sddm drops its display-manager.service alias, which
+# `systemctl enable greetd` then claims. Never --now — that would kill the
+# session running this script.
+echo "==> Switching the display manager to greetd"
+sudo systemctl disable sddm.service 2>/dev/null || true
+sudo systemctl enable greetd.service
+echo "==> Reboot to land on the noctalia greeter (sddm stays installed as a fallback)"
+{{ else -}}
+exit 0
+{{ end -}}

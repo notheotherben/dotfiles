@@ -83,6 +83,7 @@ home/
   run_onchange_after_30-mise-install.sh    mise install
   run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
   run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit (Linux)
+  run_onchange_after_47-greetd.sh          noctalia-greeter login screen (Linux)
   run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
   run_once_after_60-default-shell.sh       chsh to fish
   run_onchange_after_70-rustic-schedule.sh (re)load LaunchAgent / systemd timer
@@ -109,11 +110,36 @@ re-run whenever the thing they manage changes.
   is the closest); `orbstack` is replaced by a native `docker` install, and
   WhatsApp has no official Linux client so Flathub's ZapZap stands in.
 - **Yubikey / pam_u2f** (Linux) is the counterpart to Touch ID: it adds a
-  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}`. Login/SDDM are
+  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}`. The login screen is
   deliberately excluded because systemd-homed needs the password to unlock the
   home area. The credential mapping comes from the `u2f_keys` field on the
   "CachyOS" 1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
   -i pam://$(hostname)` and update that field.
+- **Login screen** is `noctalia-greeter` on greetd, not SDDM. The greetd script
+  writes `/etc/greetd/config.toml` and the greeter's declarative
+  `/var/lib/noctalia-greeter/greeter.toml`, then flips
+  `display-manager.service` from `sddm` to `greetd`. SDDM stays installed as a
+  fallback — `systemctl disable greetd && systemctl enable sddm` reverts it.
+  Two things are worth knowing:
+  - **systemd-homed.** greetd authenticates through `/etc/pam.d/greetd`, which
+    reaches `pam_systemd_home` via `system-local-login` → `system-auth`. Before
+    switching display managers the script walks that whole `include` chain and
+    refuses to proceed if `pam_u2f` has crept into it or `pam_systemd_home` has
+    dropped out, because either one locks you out of `$HOME` at the next boot.
+    `[auth] allow_empty_password` is on so that submitting an empty password
+    hands the conversation back to PAM, which is how the enrolled FIDO2 token
+    (`homectl inspect` → *FIDO2 Token*) can unlock the home area instead of the
+    passphrase.
+  - **Idle blanking** is set to 60s in `greeter.toml`. The greeter never blanks
+    by default, and a login screen left sitting on an OLED panel is exactly the
+    burn-in case worth avoiding. The logged-in session keeps noctalia's own
+    defaults (screen off at 180s, lock at 600s), which live in the shell's
+    settings rather than here.
+  Theming is *not* managed: `noctalia msg greeter-sync` pushes the wallpaper,
+  palette, and monitor layout into the sibling `sync.toml`, and keys in
+  `greeter.toml` win over it, so the two never collide. No `[cursor]` block is
+  set either, because Bibata only exists under `~/.local/share/icons` — inside
+  the encrypted home the greeter is there to unlock.
 - **Hyprland** is loaded by `~/.config/hypr/hyprland.lua`, which ships with
   CachyOS and is *not* managed here. The files under `hypr/config/` are forks of
   the CachyOS defaults, so upstream changes to those specific files no longer
