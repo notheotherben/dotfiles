@@ -25,6 +25,9 @@ echo "==> Reloading rustic-backup.timer"
 systemctl --user daemon-reload
 systemctl --user enable --now rustic-backup.timer
 
-# Survive logout so hourly backups still run on a locked/headless session.
-loginctl enable-linger "$(id -un)" 2>/dev/null || true
+# Never enable lingering here: this account is on systemd-homed, so starting
+# user@.service at boot makes PAM demand the security token PIN before any
+# greeter exists. Plymouth grabs the console for that prompt and login wedges.
+# The timer's Persistent=true catches up missed runs at next login instead.
+loginctl disable-linger "$(id -un)" 2>/dev/null || true
 {{ end -}}
