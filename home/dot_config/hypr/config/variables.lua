@@ -1,7 +1,7 @@
 -- Hyprland default apps
 
 TERMINAL     = "ghostty"
-FILE_MANAGER = "dolphin"
+FILE_MANAGER = "nautilus"
 BROWSER      = "firefox"
 EDITOR       = "code"
 CALCULATOR   = "gnome-calculator"
