@@ -22,13 +22,6 @@ hl.bind(mainMod .. " + Down",  hl.dsp.focus({ direction = "down" }))
 hl.bind("ALT + Tab",           hl.dsp.window.cycle_next())
 hl.bind("CONTROL + ALT + Tab",   hl.dsp.exec_cmd(noctCall .. "window-switcher"))
 
--- Move scrolling layout
-hl.bind(mainMod .. " + ALT + Left", hl.dsp.layout("move -col"))
-hl.bind(mainMod .. " + ALT + Right", hl.dsp.layout("move +col"))
-hl.bind(mainMod .. " + ALT + Up", hl.dsp.layout("colresize +conf"))
-hl.bind(mainMod .. " + ALT + Down", hl.dsp.layout("colresize -conf"))
-hl.bind(mainMod .. " + CONTROL + ALT + Left", hl.dsp.layout("swapcol l"))
-hl.bind(mainMod .. " + CONTROL + ALT + Right", hl.dsp.layout("swapcol r"))
 
 -- Move active window around workspaces & monitors
 hl.bind(mainMod .. " + SHIFT + Up",                   hl.dsp.window.move({ direction = "u" }))
@@ -71,10 +64,8 @@ hl.bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating =
 ---- LAUNCHER ----
 ------------------
 
-hl.bind(mainMod .. " + D",     hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
-hl.bind(mainMod .. " + slash",          hl.dsp.exec_cmd(launchPrefix .. FILE_MANAGER))
-hl.bind(mainMod .. " + C",          hl.dsp.exec_cmd(launchPrefix .. EDITOR))
-hl.bind(mainMod .. " + W",          hl.dsp.exec_cmd(launchPrefix .. BROWSER))
+hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(launchPrefix .. FILE_MANAGER))
+hl.bind(mainMod .. " + C",          hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
 hl.bind("CONTROL + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL .. " -e btop"))
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))

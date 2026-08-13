@@ -2,6 +2,10 @@ hl.config({
     dwindle = {
         preserve_split = true,
     },
+    master = {
+        mfact = 0.76,
+        focus_master_on_close = true
+    },
     misc = {
         col = {
             splash = CACHYLGREEN,
