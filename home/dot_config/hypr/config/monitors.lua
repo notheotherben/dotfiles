@@ -33,10 +33,10 @@ hl.monitor({
     sdrbrightness = 0.75,
     sdrsaturation = 1.1,
     sdr_min_luminance = 0,
-    sdr_max_luminance = 250,
+    sdr_max_luminance = 150,
     min_luminance = 0,
-    max_luminance = 970,
-    max_avg_luminance = 277
+    max_luminance = 800,
+    max_avg_luminance = 270
 })
 
 hl.monitor({
@@ -47,12 +47,12 @@ hl.monitor({
     position  = "3840x216",
     scale     = 1.25,
     bitdepth = 10,
-    cm = "dcip3",
+    -- cm = "dcip3",
     sdr_eotf = "gamma22",
     sdrbrightness = 1.0,
     sdrsaturation = 1.0,
     sdr_min_luminance = 1,
-    sdr_max_luminance = 250,
+    sdr_max_luminance = 300,
     -- Values taken from the panel's EDID (max 400, frame-average 322, min 0.098).
     min_luminance = 0.098,
     max_luminance = 400,
