@@ -2,8 +2,10 @@
 #
 #   Install/upgrade tools with:  mise install   (or `mise up`)
 #
-# mise is reserved for the language runtimes. Everything else comes from a
-# native package manager; the few tools with no Linux package are in
+# mise owns the language runtimes and the HashiCorp tools; the latter move in
+# lockstep with the clusters they talk to, so a single cross-platform source
+# beats Homebrew's tap on macOS and pacman/AUR on Arch. Everything else comes
+# from a native package manager; the few tools with no Linux package are in
 # conf.d/linux.toml.
 
 [tools]
@@ -11,6 +13,13 @@ deno = "latest"
 go = "latest"
 node = "lts"
 usage = "latest"
+
+# HashiCorp. nomad-pack has no aqua package, so it is fetched straight from
+# releases.hashicorp.com with the checksums published alongside it.
+nomad = "latest"
+nomad-pack = { version = "0.4.2", checksum_url = "https://releases.hashicorp.com/nomad-pack/{{ version }}/nomad-pack_{{ version }}_SHA256SUMS", url = 'https://releases.hashicorp.com/nomad-pack/{{ version }}/nomad-pack_{{ version }}_{{ os(macos="darwin") }}_{{ arch(x64="amd64") }}.zip', version_expr = "fromJSON(body).versions | keys() | sortVersions()", version_list_url = "https://releases.hashicorp.com/nomad-pack/index.json" }
+terraform = "latest"
+vault = "latest"
 
 [env]
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"

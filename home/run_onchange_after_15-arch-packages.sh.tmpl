@@ -28,7 +28,6 @@ pacman_packages="
   jq
   meson
   mise
-  nomad
   noctalia-greeter
   pam-u2f
   protobuf
@@ -40,9 +39,7 @@ pacman_packages="
   speedtest-cli
   starship
   tailscale
-  terraform
   uv
-  vault
   vim
   xh
   zed
@@ -55,7 +52,6 @@ aur_packages="
   1password
   1password-cli
   claude-code
-  nomad-pack
   powershell-bin
   signal-desktop-beta-bin
   synology-drive
@@ -75,6 +71,8 @@ flatpak_packages="
 #   little-snitch  -> no equivalent (opensnitch in the AUR is the closest)
 #   orbstack       -> Docker runs natively (docker/docker-compose above)
 #   grpcurl        -> the AUR build fails; install it by hand if needed
+# The HashiCorp tools (nomad, nomad-pack, terraform, vault) come from mise on
+# every platform so the versions stay in step — see dot_config/mise/config.toml.
 # git-tool/shig/tailservice have no distro package at all and come from mise —
 # see dot_config/mise/conf.d/linux.toml.
 

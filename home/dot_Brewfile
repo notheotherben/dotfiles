@@ -5,9 +5,9 @@
 #
 # The Linux counterpart is run_onchange_after_15-arch-packages.sh.tmpl
 # (pacman / AUR / Flathub). Language runtimes are managed by mise on both
-# platforms — see ~/.config/mise/config.toml.
+# platforms — see ~/.config/mise/config.toml, as are the HashiCorp tools
+# (nomad, nomad-pack, terraform, vault).
 
-tap "hashicorp/tap"
 tap "sierrasoftworks/tap"
 
 brew "mise"                    # language runtimes
@@ -51,11 +51,6 @@ brew "uv"
 brew "vim"
 brew "xh"                      # aliased to `http`
 brew "zsh-syntax-highlighting" # zsh fallback niceties
-
-brew "hashicorp/tap/nomad"
-brew "hashicorp/tap/nomad-pack"
-brew "hashicorp/tap/terraform"
-brew "hashicorp/tap/vault"
 
 brew "sierrasoftworks/tap/git-tool"
 brew "sierrasoftworks/tap/shig"
