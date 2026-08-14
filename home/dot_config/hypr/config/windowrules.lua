@@ -16,9 +16,26 @@ hl.window_rule({
 local gamingApps = "^(steam_app.*|gamescope)$"
 local gamingWorkspace = "name:gaming"
 
+-- VoiceAttack (Steam appid 583010) is a desktop app rather than a game, so it is
+-- excluded from the gaming rules below and given its own rules instead.
+local voiceAttackApp    = "^(steam_app_583010)$"
+local notVoiceAttackApp = "negative:" .. voiceAttackApp
+
+-- VoiceAttack: floating on workspace 5, including its dialogs and tooltips.
+-- Declared before the gaming rules so it wins the workspace assignment.
+hl.window_rule({
+    match            = { class = voiceAttackApp },
+    workspace        = "5",
+    float            = true,
+    decorate         = true,
+    fullscreen       = false,
+    fullscreen_state = 0,
+    content          = "none",
+})
+
 hl.window_rule({ match = { content = "game" }, workspace = gamingWorkspace })
 hl.window_rule({ match = { xdg_tag = "^(.*game.*)$" }, workspace = gamingWorkspace, fullscreen_state = 2, content = "game", sync_fullscreen = true })
-hl.window_rule({ match = { class = gamingApps }, workspace = gamingWorkspace })
+hl.window_rule({ match = { class = gamingApps, initial_class = notVoiceAttackApp }, workspace = gamingWorkspace })
 hl.window_rule({ match = { class = "^(steam)$", title = "^(Friends List)$" }, float = true })
 hl.window_rule({ match = { class = "^(steam)$", title = "^(Launching\\.{3})$" }, float = true, center = true, workspace = gamingWorkspace })
 hl.window_rule({
@@ -26,6 +43,7 @@ hl.window_rule({
         class         = gamingApps,
         title         = "^(.+)$",
         initial_title = "negative:^(.*\\\\home\\\\.*)$",
+        initial_class = notVoiceAttackApp,
     },
     content          = "game",
     decorate         = false,
@@ -36,6 +54,7 @@ hl.window_rule({
 hl.window_rule({
     match = {
         class         = "^(steam_app.*)$",
+        initial_class = notVoiceAttackApp,
         initial_title = "^$",
     },
     center           = true,
