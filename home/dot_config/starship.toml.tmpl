@@ -1,25 +1,25 @@
 # Starship prompt — deployed by chezmoi to ~/.config/starship.toml
 
 palette = "monokai-pro-spectrum"
-format = "\n[](fg:bright-red)[$directory](bg:bright-red)[](fg:bright-red bg:bright-yellow)$git_branch[](fg:bright-yellow bg:yellow)$git_status[](fg:yellow bg:bright-black)$time[](fg:bright-black bg:none) $all$character "
+format = "\n[](fg:#221F22)[$directory](bg:#221F22)[](fg:#221F22 bg:#403E41)$git_branch[](fg:#403E41 bg:#5B595C)$git_status[](fg:#5B595C bg:#727072)$time[](fg:#727072 bg:none) $all$character "
 
 add_newline = true
 
 [directory]
-style = "bg:bright-red fg:background"
+style = "bg:#221F22 fg:#FFD866"
 
 [git_branch]
 format = "[ $symbol$branch ]($style)"
-style = "bg:bright-yellow fg:background"
+style = "bg:#403E41 fg:#FCFCFA"
 
 [git_status]
 format = "[ $all_status$ahead_behind ]($style)"
-style = "bg:yellow fg:background"
+style = "bg:#5B595C fg:#FCFCFA"
 
 [time]
 disabled = false
 format = "[ $time ]($style)"
-style = "bg:bright-black fg:foreground"
+style = "bg:#727072 fg:#FCFCFA"
 
 [palettes.monokai-pro-spectrum]
 # ANSI colors
