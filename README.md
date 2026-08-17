@@ -141,7 +141,13 @@ re-run whenever the thing they manage changes.
     `/tmp/hyprlogin-debug.log` when `general:debug_mode` is on.
   Both configs surface the live PAM prompt (`$PAMPROMPT` in hyprlock), because
   knowing whether PAM currently wants the password or the PIN is the difference
-  between one wrong attempt and a blocked key.
+  between one wrong attempt and a blocked key. hyprlock is worth a warning here:
+  it *discards* `PAM_ERROR_MSG`, so systemd's "Security token PIN incorrect for
+  user …" is only logged and never drawn, and `fail_text`/`$PAMFAIL` only fire
+  once `pam_authenticate` returns rather than on a mid-conversation retry. The
+  prompt flipping to "Sorry, retry security token PIN:" is the only in-band
+  signal, which is why it gets its own label above the field instead of sitting
+  greyed out as placeholder text.
   If the token does get blocked, recover with the **account password** or the
   **recovery key** (`homectl inspect` lists both) rather than hot-plugging the
   Yubikey, then power-cycle the key at a calmer moment. The 46-faillock script
@@ -170,9 +176,11 @@ re-run whenever the thing they manage changes.
     Submitting an empty password at the first prompt hands the conversation back
     to PAM, which is how the enrolled FIDO2 token (`homectl inspect` → *FIDO2
     Token*) gets asked for instead of the passphrase.
-  - **Session cache.** ReGreet remembers the last user and session under
-    `/var/cache/regreet`, which the script creates for the `greeter` user;
-    without it every boot starts on the user picker.
+  - **Session cache.** `skip_selection` is on, so the greeter opens straight on
+    the password prompt for whoever logged in last. That choice is cached under
+    `/var/cache/regreet`, which the script creates for the `greeter` user; the
+    first boot after a wipe still shows the picker, and the user/session
+    dropdowns come back on any authentication failure.
   Theming is minimal on purpose. ReGreet is a GTK app and cannot be driven by
   `noctalia msg greeter-sync`, so `[shell.greeter_sync] auto_sync` is off and
   the greeter just uses a dark Adwaita. No custom cursor either, because Bibata

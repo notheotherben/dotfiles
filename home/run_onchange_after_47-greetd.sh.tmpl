@@ -129,6 +129,11 @@ sudo cp -n /etc/greetd/regreet.toml /etc/greetd/regreet.toml.pregreeter.bak 2>/d
 printf '%s\n' \
   '# Managed by chezmoi — see run_onchange_after_47-greetd.sh.tmpl.' \
   '' \
+  '# Jump straight to the password prompt for the last user instead of the' \
+  '# picker. Needs a cached choice under /var/cache/regreet, so the first boot' \
+  '# still asks; ReGreet also refuses to auto-login a user PAM never challenges.' \
+  'skip_selection = true' \
+  '' \
   '[GTK]' \
   'application_prefer_dark_theme = true' \
   'cursor_theme_name = "Adwaita"' \
