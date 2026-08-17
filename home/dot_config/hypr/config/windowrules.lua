@@ -33,7 +33,7 @@ hl.window_rule({
     content          = "none",
 })
 
-hl.window_rule({ match = { content = "game" }, workspace = gamingWorkspace })
+hl.window_rule({ match = { content = "game" }, workspace = gamingWorkspace, idle_inhibit = "focus" })
 hl.window_rule({ match = { xdg_tag = "^(.*game.*)$" }, workspace = gamingWorkspace, fullscreen_state = 2, content = "game", sync_fullscreen = true })
 hl.window_rule({ match = { class = gamingApps, initial_class = notVoiceAttackApp }, workspace = gamingWorkspace })
 hl.window_rule({ match = { class = "^(steam)$", title = "^(Friends List)$" }, float = true })
@@ -63,6 +63,7 @@ hl.window_rule({
     fullscreen       = false,
     fullscreen_state = 0,
     workspace        = gamingWorkspace,
+    idle_inhibit     = "focus"
 })
 
 -- Apps
@@ -90,7 +91,7 @@ hl.window_rule({
 -- Opacity Overrides
 local terminals = "^(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)$"
 
-hl.window_rule({ match = { class = "^(firefox|zen)$" }, opacity = "1.0 override" })
+hl.window_rule({ match = { class = "^(firefox|zen)$" }, opacity = "1.0 override", idle_inhibit = "fullscreen" })
 hl.window_rule({ match = { class = terminals }, opacity = "1.0 override" }) -- Override opacity in favor of terminal settings for opacity. If your terminal doesn't support transparency, you can remove this rule.
 hl.window_rule({ match = { class = "^(mpv|org.kde.haruna|.*plex.*|org\\.kde\\.gwenview|.*vlc.*)$" }, opacity = "1.0 override" })
 
