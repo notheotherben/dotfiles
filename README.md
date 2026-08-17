@@ -155,8 +155,14 @@ re-run whenever the thing they manage changes.
 - **Idle and locking** are owned by `hypridle`, autostarted from
   `~/.config/autostart/hypridle.desktop`, with every noctalia idle behaviour
   disabled so the two do not arm competing timers. Everything routes through
-  `loginctl lock-session` — the idle timeout, the session panel button, and
-  logind's own Lock signal all end up running hyprlock once.
+  `loginctl lock-session` — the idle timeout, `Super+L`, the session panel
+  button, and logind's own Lock signal all end up running hyprlock once.
+  Worth knowing when editing either config: noctalia strips the built-in `lock`
+  and `lock_and_suspend` actions from the panel, the launcher, and its session
+  IPC whenever `[lockscreen] enabled = false`, *before* it reads any `command`
+  override. So the panel's lock button is an `action = "command"` entry, and
+  `Super+L` calls `loginctl` directly rather than `noctalia msg session lock`,
+  which would just answer `error: lock screen disabled`.
 - **noctalia's `config.toml` is managed here**, which is unusual for this repo:
   the lock screen and idle sections have to stay switched off for the above to
   hold. Changes made in noctalia's own settings UI land in the same file, so

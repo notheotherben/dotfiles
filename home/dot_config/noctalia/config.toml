@@ -63,12 +63,15 @@ settings_show_advanced = true
     pipe_to_command = true
     save_to_file = false
 
-    # `command` overrides the built-in handler. Going through logind rather than
-    # calling hyprlock directly keeps the button, the idle timer, and the logind
-    # Lock signal on one path.
+    # These have to be "command" and "suspend" rather than the built-in "lock"
+    # and "lock_and_suspend": noctalia drops those two from the panel, the
+    # launcher, and the session IPC whenever its own lock screen is disabled,
+    # and it does so before it ever looks at `command`.
     [[shell.session.actions]]
-    action = "lock"
+    action = "command"
     command = "loginctl lock-session"
+    label = "Lock"
+    glyph = "lock"
     countdown_seconds = 0.0
     enabled = true
     shortcut = "1"
@@ -81,10 +84,9 @@ settings_show_advanced = true
     shortcut = "2"
     variant = "default"
 
-    # hypridle's before_sleep_cmd does the locking, so this only has to suspend.
+    # hypridle's before_sleep_cmd locks on the way down, so plain suspend is enough.
     [[shell.session.actions]]
-    action = "lock_and_suspend"
-    command = "systemctl suspend"
+    action = "suspend"
     countdown_seconds = 3.0
     enabled = true
     shortcut = "3"
