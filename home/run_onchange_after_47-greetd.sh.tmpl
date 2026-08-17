@@ -1,27 +1,35 @@
 #!/bin/sh
-# noctalia-greeter (via greetd) as the login screen, replacing SDDM.
+# ReGreet (via greetd, inside cage) as the login screen, replacing SDDM.
 #
 # Two files are managed here:
-#   /etc/greetd/config.toml                 what greetd launches, and as whom
-#   /var/lib/noctalia-greeter/greeter.toml  the greeter's declarative config
+#   /etc/greetd/config.toml   what greetd launches, and as whom
+#   /etc/greetd/regreet.toml  the greeter's own configuration
 #
-# greeter.toml is the half of the greeter's config that Sync never writes:
-# `noctalia msg greeter-sync` only touches the sibling sync.toml (wallpaper,
-# palette, output layout), and anything set here wins over it. So the two can
-# coexist — the shell keeps theming the greeter while this file owns behaviour.
+# ReGreet rather than a prettier greeter because of how this account
+# authenticates. systemd-homed with a FIDO2 token is a multi-prompt PAM
+# conversation — password, then "Security token PIN:", then "Sorry, retry
+# security token PIN:" after a bad one — and greetd relays each of those as a
+# separate auth_message. ReGreet loops over them, shows the real prompt text,
+# and clears the field between prompts, so one typo costs one of the token's
+# eight PIN retries. A greeter that answers every auth_message with the one
+# string it buffered spends three at once and blocks the token until it is
+# physically reinserted.
 #
 # Runs after 45-pam-u2f so the PAM checks below see the finished stack.
 {{ if eq .chezmoi.os "linux" -}}
 set -eu
 
-session_bin="/usr/bin/noctalia-greeter-session"
+greeter_bin="/usr/bin/regreet"
+compositor_bin="/usr/bin/cage"
 greeter_user="greeter"
-state_dir="/var/lib/noctalia-greeter"
+cache_dir="/var/cache/regreet"
 
-if [ ! -x "$session_bin" ]; then
-  echo "!! $session_bin not found — skipping (pacman should install noctalia-greeter)"
-  exit 0
-fi
+for bin in "$greeter_bin" "$compositor_bin"; do
+  if [ ! -x "$bin" ]; then
+    echo "!! $bin not found — skipping (pacman should install greetd-regreet and cage)"
+    exit 0
+  fi
+done
 
 # install(1) refuses a pipe as its source, so stage stdin in a temp file first.
 install_stdin() {
@@ -86,8 +94,8 @@ else
     pam_ok=0
   fi
 
-  # noctalia-greeter's own requirement: greetd has to register a logind session
-  # for the user, otherwise the Hyprland/UWSM session comes up without a seat.
+  # greetd has to register a logind session for the user, otherwise the
+  # Hyprland/UWSM session comes up without a seat.
   if ! grep -qE '^[[:space:]]*session.*pam_(systemd|elogind)\.so' "$pam_file"; then
     echo "==> Adding pam_systemd session rule to $pam_file"
     sudo cp -n "$pam_file" "$pam_file.pregreeter.bak"
@@ -102,8 +110,9 @@ fi
 echo "==> Writing /etc/greetd/config.toml"
 sudo mkdir -p /etc/greetd
 sudo cp -n /etc/greetd/config.toml /etc/greetd/config.toml.pregreeter.bak 2>/dev/null || true
-# No `--session` flag: greeter.toml's [session] default already pins it, and
-# keeping it there avoids quoting a name with spaces through greetd's parser.
+# cage flags: -s keeps VT switching available (the escape hatch if the greeter
+# ever wedges), -m last pins it to one output because ReGreet is single-monitor,
+# -d drops client-side decorations.
 printf '%s\n' \
   '# Managed by chezmoi — see run_onchange_after_47-greetd.sh.tmpl.' \
   '' \
@@ -111,44 +120,38 @@ printf '%s\n' \
   'vt = 1' \
   '' \
   '[default_session]' \
-  "command = \"$session_bin\"" \
+  "command = \"$compositor_bin -s -m last -d -- $greeter_bin\"" \
   "user = \"$greeter_user\"" |
   install_stdin root /etc/greetd/config.toml
 
-echo "==> Writing $state_dir/greeter.toml"
-sudo install -d -m 0750 -o "$greeter_user" -g "$greeter_user" "$state_dir"
-sudo cp -n "$state_dir/greeter.toml" "$state_dir/greeter.toml.pregreeter.bak" 2>/dev/null || true
+echo "==> Writing /etc/greetd/regreet.toml"
+sudo cp -n /etc/greetd/regreet.toml /etc/greetd/regreet.toml.pregreeter.bak 2>/dev/null || true
 printf '%s\n' \
   '# Managed by chezmoi — see run_onchange_after_47-greetd.sh.tmpl.' \
-  '# Sync (noctalia msg greeter-sync) writes sync.toml, never this file, and' \
-  '# every key set here wins over the synced value.' \
   '' \
-  '[auth]' \
-  '# Submitting an empty password hands the conversation back to PAM, which is' \
-  '# how pam_systemd_home gets to prompt for the FIDO2 token PIN instead of the' \
-  '# passphrase. The password still works; this only adds the token as an option.' \
-  'allow_empty_password = true' \
+  '[GTK]' \
+  'application_prefer_dark_theme = true' \
+  'cursor_theme_name = "Adwaita"' \
+  'icon_theme_name = "Adwaita"' \
+  'theme_name = "Adwaita"' \
+  '# Cantarell and Adwaita ship with the GTK stack, so they resolve for the' \
+  '# unprivileged greeter user; anything under ~/.local/share is inside the' \
+  '# encrypted home this screen exists to unlock.' \
+  'font_name = "Cantarell 14"' \
   '' \
-  '[user]' \
-  'default = "{{ .chezmoi.username }}"' \
+  '[commands]' \
+  'reboot = [ "systemctl", "reboot" ]' \
+  'poweroff = [ "systemctl", "poweroff" ]' \
   '' \
-  '[session]' \
-  'default = "Hyprland (uwsm-managed)"' \
-  '' \
-  '[idle]' \
-  '# OLED burn-in protection. The greeter never blanks by default, and a login' \
-  '# screen can sit untouched for hours; drop DRM output after a minute idle.' \
-  'timeout = 60' \
-  '' \
-  '[keyboard]' \
-  '# greetd starts greeters with an empty environment, so XKB_DEFAULT_LAYOUT' \
-  '# from the session is not visible here and the layout has to be spelled out.' \
-  'layout = "us"' |
-  install_stdin "$greeter_user" "$state_dir/greeter.toml"
+  '[appearance]' \
+  '# Worth reading rather than typing past: PAM asks for the account password' \
+  '# first and the FIDO2 PIN second, and says so in the prompt above the field.' \
+  'greeting_msg = "Password first, then the security token PIN."' |
+  install_stdin root /etc/greetd/regreet.toml
 
-# No [cursor] block on purpose: Bibata-Modern-Ice is only installed under
-# ~/.local/share/icons, which lives inside the encrypted home the greeter is
-# there to unlock. wlroots' built-in cursor is used instead.
+# ReGreet remembers the last user and session here; without it every boot
+# starts on the user picker.
+sudo install -d -m 0755 -o "$greeter_user" -g "$greeter_user" "$cache_dir"
 
 # --------------------------------------------------------------------------
 # Display manager switch.
@@ -169,7 +172,7 @@ fi
 echo "==> Switching the display manager to greetd"
 sudo systemctl disable sddm.service 2>/dev/null || true
 sudo systemctl enable greetd.service
-echo "==> Reboot to land on the noctalia greeter (sddm stays installed as a fallback)"
+echo "==> Reboot to land on ReGreet (sddm stays installed as a fallback)"
 {{ else -}}
 exit 0
 {{ end -}}

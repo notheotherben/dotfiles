@@ -1,11 +1,12 @@
 #!/bin/sh
-# Let a Yubikey stand in for the password on sudo, su, and polkit prompts.
-# The credentials themselves live in ~/.config/Yubico/u2f_keys.
+# Let a Yubikey stand in for the password on sudo, su, polkit, and hyprlock
+# prompts. The credentials themselves live in ~/.config/Yubico/u2f_keys.
 #
 # Deliberately not applied to greetd/login: this account is managed by
 # systemd-homed, so the password typed at the greeter is what unlocks the LUKS
 # home area. A `sufficient` Yubikey rule there would satisfy PAM without ever
-# reaching pam_systemd_home, and $HOME would stay locked.
+# reaching pam_systemd_home, and $HOME would stay locked. hyprlock is the
+# exception that proves the rule — see the note above its stack below.
 # 47-greetd re-checks that invariant before switching display managers.
 {{ if eq .chezmoi.os "linux" -}}
 set -eu
@@ -50,6 +51,32 @@ for service in sudo su su-l polkit-1; do
   sudo install -m 0644 -o root -g root "$tmp" "$file"
   rm -f "$tmp"
 done
+
+# hyprlock gets its own stack rather than the `auth include login` the package
+# ships, so the Yubikey rule here never leaks into tty login. `sufficient` is
+# safe at a screen lock — the home area is already unlocked and this only has to
+# prove who is sitting there — whereas at greetd or login it would satisfy PAM
+# without handing a password to pam_systemd_home and leave $HOME locked.
+#
+# pam_u2f prompts for the PIN once, so a typo costs one of the token's eight
+# retries. Falling through to system-auth reaches pam_systemd_home for the
+# password, the recovery key, or the token when the key is not plugged in.
+if [ -x /usr/bin/hyprlock ]; then
+  echo "==> Writing /etc/pam.d/hyprlock"
+  sudo cp -n /etc/pam.d/hyprlock /etc/pam.d/hyprlock.preu2f.bak 2>/dev/null || true
+  tmp="$(mktemp)"
+  printf '%s\n' \
+    '#%PAM-1.0' \
+    '# Managed by chezmoi — see run_onchange_after_45-pam-u2f.sh.tmpl.' \
+    "$u2f_rule" \
+    'auth        include     system-auth' \
+    'account     include     system-auth' \
+    'password    include     system-auth' \
+    'session     include     system-auth' \
+    >"$tmp"
+  sudo install -m 0644 -o root -g root "$tmp" /etc/pam.d/hyprlock
+  rm -f "$tmp"
+fi
 {{ else -}}
 exit 0
 {{ end -}}

@@ -67,6 +67,9 @@ home/
     ghostty/config           -> ~/.config/ghostty/config
     git/config.tmpl          -> ~/.config/git/config         (per-OS op-ssh-sign)
     hypr/config/…            -> ~/.config/hypr/config/…       (Linux)
+    hypr/hyprlock.conf       -> ~/.config/hypr/hyprlock.conf  (Linux)
+    hypr/hypridle.conf       -> ~/.config/hypr/hypridle.conf  (Linux)
+    noctalia/config.toml     -> ~/.config/noctalia/config.toml (Linux)
     starship.toml            -> ~/.config/starship.toml
     mise/config.toml         -> ~/.config/mise/config.toml
     mise/conf.d/linux.toml   -> extra mise tools              (Linux only)
@@ -82,8 +85,9 @@ home/
   run_onchange_after_25-hyprpm-plugins.sh  Hyprland plugins         (Linux)
   run_onchange_after_30-mise-install.sh    mise install
   run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
-  run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit (Linux)
-  run_onchange_after_47-greetd.sh          noctalia-greeter login screen (Linux)
+  run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit/hyprlock (Linux)
+  run_onchange_after_46-faillock.sh        pam_faillock thresholds    (Linux)
+  run_onchange_after_47-greetd.sh          ReGreet login screen       (Linux)
   run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
   run_once_after_60-default-shell.sh       chsh to fish
   run_onchange_after_70-rustic-schedule.sh (re)load LaunchAgent / systemd timer
@@ -110,36 +114,70 @@ re-run whenever the thing they manage changes.
   is the closest); `orbstack` is replaced by a native `docker` install, and
   WhatsApp has no official Linux client so Flathub's ZapZap stands in.
 - **Yubikey / pam_u2f** (Linux) is the counterpart to Touch ID: it adds a
-  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}`. The login screen is
-  deliberately excluded because systemd-homed needs the password to unlock the
-  home area. The credential mapping comes from the `u2f_keys` field on the
-  "CachyOS" 1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
+  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}` and writes a
+  dedicated `/etc/pam.d/hyprlock`. The login screen is deliberately excluded
+  because systemd-homed needs the password to unlock the home area; hyprlock is
+  the exception, since `$HOME` is already unlocked while the screen is locked.
+  The credential mapping comes from the `u2f_keys` field on the "CachyOS"
+  1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
   -i pam://$(hostname)` and update that field.
-- **Login screen** is `noctalia-greeter` on greetd, not SDDM. The greetd script
-  writes `/etc/greetd/config.toml` and the greeter's declarative
-  `/var/lib/noctalia-greeter/greeter.toml`, then flips
-  `display-manager.service` from `sddm` to `greetd`. SDDM stays installed as a
-  fallback — `systemctl disable greetd && systemctl enable sddm` reverts it.
-  Two things are worth knowing:
+- **Why the lock screen and greeter are what they are.** This account is
+  systemd-homed with a FIDO2 token, so authenticating is a *multi-prompt* PAM
+  conversation: the account password, then `Security token PIN:`, then `Sorry,
+  retry security token PIN:` if that one was wrong. Any UI that buffers a single
+  string and replays it at every prompt therefore hands the Yubikey three wrong
+  PINs in about a second — the CTAP2 consecutive-failure limit — which blocks
+  the token until it is physically reinserted and burns three of its eight
+  lifetime retries. noctalia's built-in lock screen does exactly that; it cost a
+  real lockout, so both halves were replaced with implementations that re-prompt:
+  - **hyprlock** waits for fresh input whenever the prompt text changes
+    (`initialPrompt || PROMPTCHANGED` in its PAM conversation), so a typo costs
+    one retry. `[lockscreen] enabled = false` in noctalia's config turns the old
+    one off.
+  - **ReGreet** loops over greetd's `auth_message` responses, clearing the field
+    each time. `hyprlogin` was evaluated and rejected: it handles exactly one
+    auth message per session and cancels on the second, so it cannot complete a
+    homed login at all — and it writes the submitted secret to
+    `/tmp/hyprlogin-debug.log` when `general:debug_mode` is on.
+  Both configs surface the live PAM prompt (`$PAMPROMPT` in hyprlock), because
+  knowing whether PAM currently wants the password or the PIN is the difference
+  between one wrong attempt and a blocked key.
+  If the token does get blocked, recover with the **account password** or the
+  **recovery key** (`homectl inspect` lists both) rather than hot-plugging the
+  Yubikey, then power-cycle the key at a calmer moment. The 46-faillock script
+  exists so PAM does not lock the account for ten minutes while you do that.
+- **Idle and locking** are owned by `hypridle`, autostarted from
+  `~/.config/autostart/hypridle.desktop`, with every noctalia idle behaviour
+  disabled so the two do not arm competing timers. Everything routes through
+  `loginctl lock-session` — the idle timeout, the session panel button, and
+  logind's own Lock signal all end up running hyprlock once.
+- **noctalia's `config.toml` is managed here**, which is unusual for this repo:
+  the lock screen and idle sections have to stay switched off for the above to
+  hold. Changes made in noctalia's own settings UI land in the same file, so
+  `chezmoi diff` after tweaking something in the GUI is worth a look before
+  `chezmoi apply` reverts it.
+- **Login screen** is ReGreet on greetd inside `cage`, not SDDM. The greetd
+  script writes `/etc/greetd/config.toml` and `/etc/greetd/regreet.toml`, then
+  flips `display-manager.service` from `sddm` to `greetd`. SDDM stays installed
+  as a fallback — `systemctl disable greetd && systemctl enable sddm` reverts
+  it. `cage -s` keeps VT switching available, which is the escape hatch if the
+  greeter ever wedges. Two things are worth knowing:
   - **systemd-homed.** greetd authenticates through `/etc/pam.d/greetd`, which
     reaches `pam_systemd_home` via `system-local-login` → `system-auth`. Before
     switching display managers the script walks that whole `include` chain and
     refuses to proceed if `pam_u2f` has crept into it or `pam_systemd_home` has
     dropped out, because either one locks you out of `$HOME` at the next boot.
-    `[auth] allow_empty_password` is on so that submitting an empty password
-    hands the conversation back to PAM, which is how the enrolled FIDO2 token
-    (`homectl inspect` → *FIDO2 Token*) can unlock the home area instead of the
-    passphrase.
-  - **Idle blanking** is set to 60s in `greeter.toml`. The greeter never blanks
-    by default, and a login screen left sitting on an OLED panel is exactly the
-    burn-in case worth avoiding. The logged-in session keeps noctalia's own
-    defaults (screen off at 180s, lock at 600s), which live in the shell's
-    settings rather than here.
-  Theming is *not* managed: `noctalia msg greeter-sync` pushes the wallpaper,
-  palette, and monitor layout into the sibling `sync.toml`, and keys in
-  `greeter.toml` win over it, so the two never collide. No `[cursor]` block is
-  set either, because Bibata only exists under `~/.local/share/icons` — inside
-  the encrypted home the greeter is there to unlock.
+    Submitting an empty password at the first prompt hands the conversation back
+    to PAM, which is how the enrolled FIDO2 token (`homectl inspect` → *FIDO2
+    Token*) gets asked for instead of the passphrase.
+  - **Session cache.** ReGreet remembers the last user and session under
+    `/var/cache/regreet`, which the script creates for the `greeter` user;
+    without it every boot starts on the user picker.
+  Theming is minimal on purpose. ReGreet is a GTK app and cannot be driven by
+  `noctalia msg greeter-sync`, so `[shell.greeter_sync] auto_sync` is off and
+  the greeter just uses a dark Adwaita. No custom cursor either, because Bibata
+  only exists under `~/.local/share/icons` — inside the encrypted home the
+  greeter is there to unlock.
 - **Hyprland** is loaded by `~/.config/hypr/hyprland.lua`, which ships with
   CachyOS and is *not* managed here. The files under `hypr/config/` are forks of
   the CachyOS defaults, so upstream changes to those specific files no longer

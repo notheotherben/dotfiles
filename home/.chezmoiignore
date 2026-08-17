@@ -9,6 +9,8 @@ Library/**
 .config/autostart/**
 .config/hypr
 .config/hypr/**
+.config/noctalia
+.config/noctalia/**
 .config/systemd
 .config/systemd/**
 .config/mise/conf.d

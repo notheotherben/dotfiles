@@ -1,0 +1,54 @@
+#!/bin/sh
+# Keep pam_faillock from piling a second lockout on top of a blocked token.
+#
+# The noctalia lock screen authenticates through /etc/pam.d/login, so a screen
+# unlock lands in pam_systemd_home. That module retries internally and the lock
+# screen answers every prompt with the one string that was typed, so a single
+# mistyped PIN reaches the Yubikey three times in about a second — exactly the
+# CTAP2 consecutive-failure limit. The token then blocks its PIN until it is
+# physically power-cycled, and every later attempt fails instantly with
+# "PIN of security token locked".
+#
+# Nothing here can prevent that; only reinserting the key clears the block.
+# What this does prevent is faillock's stock 3-strikes/10-minutes rule kicking
+# in on top of it, which otherwise also rejects the account password and the
+# recovery key — the two secrets that still work while the token is blocked.
+#
+# The token's own 8-attempt lifetime counter is the real brute-force defence
+# here, so faillock is left in place purely as a throttle.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+
+conf="/etc/security/faillock.conf"
+
+if [ ! -f "$conf" ]; then
+  echo "!! $conf not found — skipping (pam should provide it)"
+  exit 0
+fi
+
+echo "==> Writing $conf"
+sudo cp -n "$conf" "$conf.prefaillock.bak" 2>/dev/null || true
+
+# install(1) will not read a pipe, so stage the content in a temp file.
+tmp="$(mktemp)"
+printf '%s\n' \
+  '# Managed by chezmoi — see run_onchange_after_46-faillock.sh.tmpl.' \
+  '' \
+  '# A fumbled FIDO2 PIN costs one failure per unlock attempt, and the token' \
+  '# blocks itself long before this counter matters. Leave enough headroom to' \
+  '# recover with the account password or the recovery key.' \
+  'deny = 10' \
+  'fail_interval = 900' \
+  '' \
+  '# Long enough to slow down guessing at the lock screen, short enough that a' \
+  '# bad morning does not mean waiting out a coffee break.' \
+  'unlock_time = 60' \
+  >"$tmp"
+sudo install -m 0644 -o root -g root "$tmp" "$conf"
+rm -f "$tmp"
+
+# Counters live in /run, so this only matters until the next reboot.
+sudo faillock --reset >/dev/null 2>&1 || true
+{{ else -}}
+exit 0
+{{ end -}}
