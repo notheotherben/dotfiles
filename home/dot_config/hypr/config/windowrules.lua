@@ -63,7 +63,7 @@ hl.window_rule({
     fullscreen       = false,
     fullscreen_state = 0,
     workspace        = gamingWorkspace,
-    idle_inhibit     = "focus"
+    idle_inhibit     = "always"
 })
 
 -- Apps
