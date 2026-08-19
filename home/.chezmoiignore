@@ -11,6 +11,4 @@ Library/**
 .config/hypr/**
 .config/systemd
 .config/systemd/**
-.config/mise/conf.d
-.config/mise/conf.d/**
 {{ end -}}
