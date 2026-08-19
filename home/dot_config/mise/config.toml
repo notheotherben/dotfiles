@@ -29,6 +29,7 @@ vault = "latest"
 
 [env]
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"
+GITTOOL_CONFIG = "{{env.HOME}}/.config/git-tool/config.yml"
 VAULT_ADDR = "https://vault.sierrasoftworks.com"
 VAULT_SSH_ROLE = "admin"
 NOMAD_ADDR = "https://nomad.raptor-perch.ts.net"
