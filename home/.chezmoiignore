@@ -13,6 +13,4 @@ Library/**
 .config/noctalia/**
 .config/systemd
 .config/systemd/**
-.config/mise/conf.d
-.config/mise/conf.d/**
 {{ end -}}

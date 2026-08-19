@@ -7,7 +7,7 @@ home-manager setup).
 | Concern | macOS | Linux |
 | --- | --- | --- |
 | GUI apps, system services, most CLIs | Homebrew (`~/.Brewfile`) | pacman / AUR / Flathub |
-| Tools with no native package (`git-tool`, `shig`, `tailservice`) | Homebrew (`sierrasoftworks/tap`) | mise (`conf.d/linux.toml`) |
+| Tools with no native package (`git-tool`, `shig`, `tailservice`) | mise (`~/.config/mise/config.toml`) | mise |
 | Language runtimes | mise (`~/.config/mise/config.toml`) | mise |
 | Scheduled backups | launchd (LaunchAgent) | systemd user timer |
 | Dotfiles, OS defaults, one-off setup | chezmoi (this repo) | chezmoi (this repo) |
@@ -16,7 +16,7 @@ Native packages win wherever they exist. Homebrew is macOS-only: on Linux
 everything comes from pacman, the AUR, or Flathub — see
 [home/run_onchange_after_15-arch-packages.sh.tmpl](home/run_onchange_after_15-arch-packages.sh.tmpl).
 The Sierra Softworks tools are the one exception, with no distro package at all,
-so mise pulls the same GitHub release binaries the tap would.
+so mise pulls the GitHub release binaries directly on both platforms.
 
 ## Bootstrap a fresh machine
 
@@ -72,7 +72,6 @@ home/
     noctalia/config.toml     -> ~/.config/noctalia/config.toml (Linux)
     starship.toml            -> ~/.config/starship.toml
     mise/config.toml         -> ~/.config/mise/config.toml
-    mise/conf.d/linux.toml   -> extra mise tools              (Linux only)
     rustic/rustic.toml.tmpl  -> ~/.config/rustic/rustic.toml (per-OS repo path)
     systemd/user/…           -> rustic-backup .service/.timer (Linux only)
     Yubico/u2f_keys          -> ~/.config/Yubico/u2f_keys  (from 1Password, Linux)

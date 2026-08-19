@@ -2,11 +2,11 @@
 #
 #   Install/upgrade tools with:  mise install   (or `mise up`)
 #
-# mise owns the language runtimes and the HashiCorp tools; the latter move in
-# lockstep with the clusters they talk to, so a single cross-platform source
-# beats Homebrew's tap on macOS and pacman/AUR on Arch. Everything else comes
-# from a native package manager; the few tools with no Linux package are in
-# conf.d/linux.toml.
+# mise owns the language runtimes, the HashiCorp tools, and the SierraSoftworks
+# tools. The HashiCorp ones move in lockstep with the clusters they talk to and
+# the SierraSoftworks ones have no Arch or AUR package at all, so in both cases a
+# single cross-platform source beats Homebrew's tap on macOS and pacman/AUR on
+# Arch. Everything else comes from a native package manager.
 
 [tools]
 deno = "latest"
@@ -20,6 +20,12 @@ nomad = "latest"
 nomad-pack = { version = "0.4.2", checksum_url = "https://releases.hashicorp.com/nomad-pack/{{ version }}/nomad-pack_{{ version }}_SHA256SUMS", url = 'https://releases.hashicorp.com/nomad-pack/{{ version }}/nomad-pack_{{ version }}_{{ os(macos="darwin") }}_{{ arch(x64="amd64") }}.zip', version_expr = "fromJSON(body).versions | keys() | sortVersions()", version_list_url = "https://releases.hashicorp.com/nomad-pack/index.json" }
 terraform = "latest"
 vault = "latest"
+
+# SierraSoftworks. No Arch or AUR package, and the Homebrew tap just repackages
+# these same GitHub release binaries, so mise fetches them directly everywhere.
+"github:SierraSoftworks/git-tool" = "latest"
+"github:SierraSoftworks/shig" = "latest"
+"github:SierraSoftworks/tailservice" = "latest"
 
 [env]
 OP_BIOMETRIC_UNLOCK_ENABLED = "true"
