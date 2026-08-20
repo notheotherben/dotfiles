@@ -1,211 +1,230 @@
 # dotfiles
 
-Personal developer-machine configuration for **macOS** and **CachyOS/Arch**,
-built on **chezmoi + mise-en-place** (the successor to my old Nix / nix-darwin /
-home-manager setup).
+Machine configuration for a macOS laptop and a CachyOS/Arch desktop, applied
+with [chezmoi](https://chezmoi.io) and [mise](https://mise.jdx.dev).
 
-| Concern | macOS | Linux |
-| --- | --- | --- |
-| GUI apps, system services, most CLIs | Homebrew (`~/.Brewfile`) | pacman / AUR / Flathub |
-| Tools with no native package (`git-tool`, `shig`, `tailservice`) | mise (`~/.config/mise/config.toml`) | mise |
-| Language runtimes | mise (`~/.config/mise/config.toml`) | mise |
-| Scheduled backups | launchd (LaunchAgent) | systemd user timer |
-| Dotfiles, OS defaults, one-off setup | chezmoi (this repo) | chezmoi (this repo) |
+## Before you start
 
-Native packages win wherever they exist. Homebrew is macOS-only: on Linux
-everything comes from pacman, the AUR, or Flathub — see
-[home/run_onchange_after_15-arch-packages.sh.tmpl](home/run_onchange_after_15-arch-packages.sh.tmpl).
-The Sierra Softworks tools are the one exception, with no distro package at all,
-so mise pulls the GitHub release binaries directly on both platforms.
+- **macOS on Apple Silicon** (the scripts assume `/opt/homebrew`) or
+  **CachyOS/Arch** with a Hyprland session.
+- **1Password**, installed and signed in, with CLI integration and biometric
+  unlock enabled. Several templates call `op` at apply time to pull backup
+  credentials and Yubikey handles; `chezmoi apply` fails outright without it.
+- **A password.** Touch ID, the internal CA, `chsh`, and every PAM change prompt
+  for `sudo` on the first apply.
+- **Optional, but most of the interesting Linux behaviour assumes it:** a FIDO2
+  Yubikey on an account managed by systemd-homed.
 
-## Bootstrap a fresh machine
+## Bootstrap a machine
 
 ```bash
-# 1. Install chezmoi and apply this repo in one shot.
-#    (chezmoi pulls the repo, then its run_ scripts install the package manager,
-#     sync packages, run `mise install`, set OS defaults, etc.)
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply notheotherben/dotfiles
-
-# 2. Open a new shell (fish is now the default login shell).
 ```
 
-On Apple Silicon Homebrew lives at `/opt/homebrew`; the scripts assume that
-prefix. On Linux the package script installs `paru` if no AUR helper is present
-(CachyOS already ships one).
+chezmoi clones the repo, then its `run_` scripts install the package manager,
+sync packages, run `mise install`, and make the OS-level changes. Open a new
+shell afterwards — fish is now the login shell. On Linux, reboot to land on the
+new greeter.
 
-## Day-to-day
+## Day to day
 
 ```bash
-chezmoi edit ~/.Brewfile     # macOS packages
+chezmoi edit ~/.Brewfile                # macOS packages
 chezmoi edit --source home/run_onchange_after_15-arch-packages.sh.tmpl  # Linux packages
-chezmoi apply                # re-runs the package sync / mise install on change
-chezmoi update               # git pull + apply
+chezmoi apply                           # re-runs whatever changed
+chezmoi update                          # git pull + apply
+chezmoi diff                            # before applying over something a GUI edited
 
-brew bundle --global         # macOS: install/upgrade packages manually
-mise install                 # install/upgrade mise tools manually
+brew bundle --global                    # macOS packages, by hand
+mise install                            # mise tools, by hand
 ```
+
+`run_once_*` scripts execute a single time, keyed by content. `run_onchange_*`
+re-run whenever the thing they manage changes — the package manifests, the mise
+config, the backup units.
+
+## What it sets up
+
+### Everywhere
+
+- **fish** as the login shell, with **starship** for the prompt and **atuin**
+  for history, synced to a self-hosted server over Tailscale.
+- **git** signing commits with SSH through 1Password's `op-ssh-sign`, and the
+  1Password agent behind `~/.ssh/config`.
+- **git-tool** owning `~/dev`, `~/scratch`, and `~/worktrees`.
+- **mise** for Go, Node, Deno, the HashiCorp CLIs, and `PATH`/env
+  (`VAULT_ADDR`, `NOMAD_ADDR`, `GITTOOL_CONFIG`). Rust and .NET come from the
+  native package manager instead — mise's plugins for both are
+  community-maintained and less reliable than brew or pacman.
+- **Hourly [rustic](https://rustic.cli.rs) backups** of `$HOME` to an SMB share,
+  with OpenTelemetry metrics and check-ins to a cron monitor so a silently dead
+  backup gets noticed. Retention is 7 daily / 5 monthly / 2 yearly.
+- **A Monokai Pro Spectrum palette** across Ghostty, starship, and hyprlock, so
+  a terminal looks the same on either machine. `Ctrl+Shift+C`/`V` for the
+  clipboard, because `Ctrl+C` belongs to the shell.
+- **An internal CA**, trusted in the System keychain or the p11-kit anchor
+  store.
+
+### macOS
+
+- **Touch ID for `sudo`**, via `/etc/pam.d/sudo_local` so it survives OS
+  updates.
+- **Homebrew** as the package manager, driven by `~/.Brewfile`.
+- **Finder defaults**: all extensions, hidden files, no desktop icons, no
+  extension-change warning.
+- Backups run from a **LaunchAgent** that mounts the SMB share with `osascript`
+  before each run.
+
+### CachyOS / Arch
+
+- **A Windows Hello-style PIN.** `pam_u2f` sits `sufficient` in front of `sudo`,
+  `su`, polkit, and hyprlock, so those prompts take the Yubikey's PIN instead of
+  the account password. Deliberately *not* wired into greetd or `login`: on
+  systemd-homed the password typed at boot is what unlocks the encrypted home
+  area, and a `sufficient` Yubikey rule there would satisfy PAM while leaving
+  `$HOME` locked. The greetd script re-checks that invariant and refuses to
+  switch display managers if it has been broken.
+- **hyprlock and ReGreet** in place of noctalia's locker and SDDM. The reasoning
+  is below; it is the one choice here that is genuinely load-bearing.
+- **hypridle** owning idle behaviour: screen off at 60s, lock at 10 minutes,
+  everything routed through `loginctl lock-session` so the idle timer, `Super+L`,
+  the session panel, and logind's own Lock signal all end up in one place.
+- **Hyprland**, forked from the CachyOS defaults: HDR on the primary monitor
+  with the full colour-management protocol enabled, per-monitor workspaces, a
+  gaming workspace that catches `steam_app*` windows and inhibits idle, and a
+  communication scratchpad on `Super+,` that tiles Signal, Telegram, WhatsApp,
+  and Fastmail into an even grid.
+- **noctalia** as the bar and shell, with its lock screen and idle timers
+  switched off.
+- **Backups** on a systemd user timer with `Persistent=true`, and lingering
+  explicitly *disabled* — on systemd-homed, starting `user@.service` at boot
+  makes PAM demand the token PIN before any greeter exists, and Plymouth eats
+  the prompt.
+- **pam_faillock** loosened to 10 failures / 60 seconds, for the reason in the
+  next section.
+
+## Make it yours
+
+This is one person's configuration rather than a framework, and a fair amount of
+it is bound to specific accounts, hosts, and hardware. Fork it and work through
+this list before applying it to anything that matters.
+
+| What | Where | Notes |
+| --- | --- | --- |
+| Git identity and signing key | `home/dot_config/git/config.tmpl` | Name, email, and the SSH public key 1Password signs with. The `op-ssh-sign` paths are already templated per-OS. |
+| 1Password item IDs | `home/dot_config/rustic/private_rustic.toml.tmpl`, `home/dot_config/Yubico/private_u2f_keys.tmpl` | Both hard-code an item UUID. The backup item needs `server`, `volume`, `encryption`, `domain`, `telemetry`, and `cron_token` fields plus a username; the Yubikey item needs a `u2f_keys` field. Templates fail loudly when a field is missing, which is the right failure. |
+| Service endpoints | `home/dot_config/mise/config.toml`, `home/dot_config/atuin/config.toml`, `home/private_dot_ssh/private_config.tmpl` | `VAULT_ADDR`, `NOMAD_ADDR`, the atuin sync server, and the `nas` host all point at a private tailnet. |
+| Backup target and monitoring | `home/dot_config/rustic/private_rustic.toml.tmpl` | The status check-in URL, the SMB share, and — on Linux — the `/backup` mount that `rustic-backup.service` declares in `RequiresMountsFor`. That mount comes from `/etc/fstab` and is *not* managed here. |
+| Internal CA | `home/dot_config/certs/`, `run_once_after_80-trust-internal-ca.sh.tmpl` | Swap the certificate and the CN the script checks for, or drop both. |
+| Package manifests | `home/dot_Brewfile`, `run_onchange_after_15-arch-packages.sh.tmpl` | The obvious first thing to prune. |
+| Monitors | `home/dot_config/hypr/config/variables.lua`, `monitors.lua` | Outputs, modes, and positions. The luminance numbers come from a specific panel's EDID and are meaningless on another one. |
+| Yubikey registration | `run_onchange_after_45-pam-u2f.sh.tmpl` | `origin`/`appid` are bound to the hostname, so every machine needs its own `pamu2fcfg -o pam://$(hostname) -i pam://$(hostname)` run, stored back in 1Password. |
+| git-tool services | `home/dot_config/git-tool/config.yml.tmpl` | Repository root and the GitHub/GHP service definitions. |
+| Autostart and scratchpad apps | `home/dot_config/autostart/`, `hypr/config/windowrules.lua` | The window classes tiled by the communication scratchpad are listed by hand. |
+
+The Linux desktop half also assumes systemd-homed with an enrolled FIDO2 token.
+On a conventional local account the PAM scripts still apply cleanly, but the
+reasoning behind them — everything in the next section — stops applying, and a
+simpler locker would be a defensible choice.
+
+## Why the lock screen and greeter are custom
+
+Authenticating this account is a *multi-prompt* PAM conversation: the account
+password, then `Security token PIN:`, then `Sorry, retry security token PIN:` if
+that one was wrong. Any UI that buffers a single string and replays it at every
+prompt hands the Yubikey three wrong PINs in about a second — the CTAP2
+consecutive-failure limit. The token then blocks itself until it is physically
+reinserted, and three of its eight lifetime retries are gone. Finding that out
+cost exactly one real lockout.
+
+noctalia's built-in lock screen behaves that way, and so does every prettier
+greeter that was tried. Both halves were replaced with implementations that
+re-prompt:
+
+- **hyprlock** waits for fresh input whenever the prompt text changes, so a typo
+  costs one retry instead of three. It also gets its own `/etc/pam.d/hyprlock`
+  rather than the `auth include login` the package ships, which keeps the
+  Yubikey rule from leaking into tty login.
+- **ReGreet** loops over greetd's `auth_message` responses and clears the field
+  each time. `hyprlogin` was evaluated and rejected: it handles exactly one auth
+  message per session and cancels on the second, so it cannot complete a homed
+  login at all — and it writes the submitted secret to `/tmp` in debug mode.
+
+Both configs put the live PAM prompt on screen, because knowing whether PAM
+currently wants the password or the PIN is the whole difference between one
+wrong attempt and a blocked key. hyprlock deserves a warning here: it *discards*
+`PAM_ERROR_MSG`, so systemd's "Security token PIN incorrect" is logged and never
+drawn, and `$PAMFAIL` only fires once `pam_authenticate` returns. The prompt
+flipping to "Sorry, retry…" is the only in-band signal, which is why it gets its
+own label above the field instead of sitting greyed out as placeholder text.
+
+Nothing here can stop a blocked token. What `46-faillock.sh` prevents is
+faillock's stock 3-strikes rule landing on top of one, which would also reject
+the account password and the recovery key — the two secrets that still work
+while the token is blocked. Recovery is one of those (`homectl inspect` lists
+both), with the key power-cycled later at a calmer moment.
+
+The tension is still live. Every one of these UIs looks better when it hides
+PAM's state machine behind a single password box, and hiding that state machine
+is precisely what costs retries. Both screens here take the ugly, chatty end of
+that trade on purpose.
 
 ## How the platform split works
 
-Every `run_` script is a chezmoi template whose body is wrapped in an
-`{{ if eq .chezmoi.os "…" }}` guard, falling through to `exit 0` on the other
-platform. Files that only exist on one platform (the Brewfile, the LaunchAgent,
-the systemd units, the Linux-only mise config) are filtered by
-`home/.chezmoiignore`.
-
-## Layout
+Every `run_` script is a chezmoi template wrapped in an
+`{{ if eq .chezmoi.os "…" }}` guard that falls through to `exit 0` on the other
+platform. Files that only exist on one platform — the Brewfile, the LaunchAgent,
+the systemd units, everything under `hypr/`, `noctalia/`, `autostart/`, and
+`Yubico/` — are filtered by `home/.chezmoiignore`.
 
 ```
-.chezmoiroot                 -> "home" (chezmoi source root is home/)
+.chezmoiroot                            -> "home"
 home/
-  .chezmoiignore             per-OS file filtering
-  dot_Brewfile               -> ~/.Brewfile          (Homebrew manifest, macOS)
-  dot_zshrc                  -> ~/.zshrc
-  dot_config/
-    autostart/….desktop      -> ~/.config/autostart/…         (XDG autostart, Linux)
-    fish/config.fish.tmpl    -> ~/.config/fish/config.fish
-    ghostty/config           -> ~/.config/ghostty/config
-    git/config.tmpl          -> ~/.config/git/config         (per-OS op-ssh-sign)
-    hypr/config/…            -> ~/.config/hypr/config/…       (Linux)
-    hypr/hyprlock.conf       -> ~/.config/hypr/hyprlock.conf  (Linux)
-    hypr/hypridle.conf       -> ~/.config/hypr/hypridle.conf  (Linux)
-    noctalia/config.toml     -> ~/.config/noctalia/config.toml (Linux)
-    starship.toml            -> ~/.config/starship.toml
-    mise/config.toml         -> ~/.config/mise/config.toml
-    rustic/rustic.toml.tmpl  -> ~/.config/rustic/rustic.toml (per-OS repo path)
-    systemd/user/…           -> rustic-backup .service/.timer (Linux only)
-    Yubico/u2f_keys          -> ~/.config/Yubico/u2f_keys  (from 1Password, Linux)
-    certs/…                  -> internal CA bundle
-  private_dot_ssh/private_config.tmpl -> ~/.ssh/config        (per-OS 1Password agent socket)
-  Library/LaunchAgents/…     -> rustic-backup plist           (macOS only)
-  run_once_before_10-install-homebrew.sh   bootstrap Homebrew       (macOS)
-  run_onchange_after_15-arch-packages.sh   pacman / AUR / flatpak   (Linux)
-  run_onchange_after_20-brew-bundle.sh     brew bundle --global     (macOS)
-  run_onchange_after_25-hyprpm-plugins.sh  Hyprland plugins         (Linux)
-  run_onchange_after_30-mise-install.sh    mise install
-  run_onchange_after_40-macos-defaults.sh  Finder / global defaults (macOS)
-  run_onchange_after_45-pam-u2f.sh         Yubikey for sudo/su/polkit/hyprlock (Linux)
-  run_onchange_after_46-faillock.sh        pam_faillock thresholds    (Linux)
-  run_onchange_after_47-greetd.sh          ReGreet login screen       (Linux)
-  run_once_after_50-touchid-sudo.sh        Touch ID for sudo        (macOS)
-  run_once_after_60-default-shell.sh       chsh to fish
-  run_onchange_after_70-rustic-schedule.sh (re)load LaunchAgent / systemd timer
-  run_once_after_80-trust-internal-ca.sh   trust internal CA
+  dot_Brewfile                          macOS packages
+  dot_config/                           fish, git, ghostty, starship, atuin,
+                                        mise, rustic, git-tool, hypr, noctalia
+  private_dot_ssh/private_config.tmpl   1Password agent socket, per-OS
+  Library/LaunchAgents/                 backup job (macOS)
+  run_once_before_10-install-homebrew   bootstrap Homebrew        (macOS)
+  run_onchange_after_15-arch-packages   pacman / AUR / Flathub    (Linux)
+  run_onchange_after_20-brew-bundle     brew bundle --global      (macOS)
+  run_onchange_after_25-hyprpm-plugins  Hyprland plugins          (Linux)
+  run_onchange_after_30-mise-install    mise install
+  run_onchange_after_35-mise-autocomplete
+  run_onchange_after_40-macos-defaults  Finder / globals          (macOS)
+  run_onchange_after_45-pam-u2f         Yubikey PIN for sudo etc. (Linux)
+  run_onchange_after_46-faillock        lockout thresholds        (Linux)
+  run_onchange_after_47-greetd          ReGreet login screen      (Linux)
+  run_once_after_50-touchid-sudo        Touch ID for sudo         (macOS)
+  run_once_after_60-default-shell       chsh to fish
+  run_onchange_after_70-rustic-schedule (re)load the backup job
+  run_once_after_80-trust-internal-ca   trust the internal CA
 ```
 
-`run_once_*` scripts execute a single time (keyed by content); `run_onchange_*`
-re-run whenever the thing they manage changes.
+## Sharp edges
 
-## Notes / manual steps
-
-- **1Password** provides the SSH agent and `op-ssh-sign` for commit signing.
-  The agent socket and signer binary live in different places on each platform,
-  so `~/.ssh/config` and `~/.config/git/config` are templated accordingly. The
-  stable release supports both, so no beta channel is needed.
-- **rustic backup** runs hourly and expects its config at `~/.config/rustic`.
-  On macOS the pre-backup hook mounts the SMB share via `osascript` under
-  `/Volumes`; on Linux the repository is `/backup`, mounted at boot from
-  `/etc/fstab`, and the systemd unit declares `RequiresMountsFor=/backup`.
-- The Touch ID, default-shell, and CA-trust scripts call `sudo` and will prompt
-  for your password on first apply. On Linux the pacman/AUR/flatpak script does
-  too.
-- No Linux equivalent is installed for `little-snitch` (`opensnitch` in `extra`
-  is the closest); `orbstack` is replaced by a native `docker` install, and
-  WhatsApp has no official Linux client so Flathub's ZapZap stands in.
-- **Yubikey / pam_u2f** (Linux) is the counterpart to Touch ID: it adds a
-  `sufficient` rule to `/etc/pam.d/{sudo,su,su-l,polkit-1}` and writes a
-  dedicated `/etc/pam.d/hyprlock`. The login screen is deliberately excluded
-  because systemd-homed needs the password to unlock the home area; hyprlock is
-  the exception, since `$HOME` is already unlocked while the screen is locked.
-  The credential mapping comes from the `u2f_keys` field on the "CachyOS"
-  1Password item; re-register with `pamu2fcfg -o pam://$(hostname)
-  -i pam://$(hostname)` and update that field.
-- **Why the lock screen and greeter are what they are.** This account is
-  systemd-homed with a FIDO2 token, so authenticating is a *multi-prompt* PAM
-  conversation: the account password, then `Security token PIN:`, then `Sorry,
-  retry security token PIN:` if that one was wrong. Any UI that buffers a single
-  string and replays it at every prompt therefore hands the Yubikey three wrong
-  PINs in about a second — the CTAP2 consecutive-failure limit — which blocks
-  the token until it is physically reinserted and burns three of its eight
-  lifetime retries. noctalia's built-in lock screen does exactly that; it cost a
-  real lockout, so both halves were replaced with implementations that re-prompt:
-  - **hyprlock** waits for fresh input whenever the prompt text changes
-    (`initialPrompt || PROMPTCHANGED` in its PAM conversation), so a typo costs
-    one retry. `[lockscreen] enabled = false` in noctalia's config turns the old
-    one off.
-  - **ReGreet** loops over greetd's `auth_message` responses, clearing the field
-    each time. `hyprlogin` was evaluated and rejected: it handles exactly one
-    auth message per session and cancels on the second, so it cannot complete a
-    homed login at all — and it writes the submitted secret to
-    `/tmp/hyprlogin-debug.log` when `general:debug_mode` is on.
-  Both configs surface the live PAM prompt (`$PAMPROMPT` in hyprlock), because
-  knowing whether PAM currently wants the password or the PIN is the difference
-  between one wrong attempt and a blocked key. hyprlock is worth a warning here:
-  it *discards* `PAM_ERROR_MSG`, so systemd's "Security token PIN incorrect for
-  user …" is only logged and never drawn, and `fail_text`/`$PAMFAIL` only fire
-  once `pam_authenticate` returns rather than on a mid-conversation retry. The
-  prompt flipping to "Sorry, retry security token PIN:" is the only in-band
-  signal, which is why it gets its own label above the field instead of sitting
-  greyed out as placeholder text.
-  If the token does get blocked, recover with the **account password** or the
-  **recovery key** (`homectl inspect` lists both) rather than hot-plugging the
-  Yubikey, then power-cycle the key at a calmer moment. The 46-faillock script
-  exists so PAM does not lock the account for ten minutes while you do that.
-- **Idle and locking** are owned by `hypridle`, autostarted from
-  `~/.config/autostart/hypridle.desktop`, with every noctalia idle behaviour
-  disabled so the two do not arm competing timers. Everything routes through
-  `loginctl lock-session` — the idle timeout, `Super+L`, the session panel
-  button, and logind's own Lock signal all end up running hyprlock once.
-  Worth knowing when editing either config: noctalia strips the built-in `lock`
-  and `lock_and_suspend` actions from the panel, the launcher, and its session
-  IPC whenever `[lockscreen] enabled = false`, *before* it reads any `command`
-  override. So the panel's lock button is an `action = "command"` entry, and
-  `Super+L` calls `loginctl` directly rather than `noctalia msg session lock`,
-  which would just answer `error: lock screen disabled`.
-- **noctalia's `config.toml` is managed here**, which is unusual for this repo:
-  the lock screen and idle sections have to stay switched off for the above to
-  hold. Changes made in noctalia's own settings UI land in the same file, so
-  `chezmoi diff` after tweaking something in the GUI is worth a look before
-  `chezmoi apply` reverts it.
-- **Login screen** is ReGreet on greetd inside `cage`, not SDDM. The greetd
-  script writes `/etc/greetd/config.toml` and `/etc/greetd/regreet.toml`, then
-  flips `display-manager.service` from `sddm` to `greetd`. SDDM stays installed
-  as a fallback — `systemctl disable greetd && systemctl enable sddm` reverts
-  it. `cage -s` keeps VT switching available, which is the escape hatch if the
-  greeter ever wedges. Two things are worth knowing:
-  - **systemd-homed.** greetd authenticates through `/etc/pam.d/greetd`, which
-    reaches `pam_systemd_home` via `system-local-login` → `system-auth`. Before
-    switching display managers the script walks that whole `include` chain and
-    refuses to proceed if `pam_u2f` has crept into it or `pam_systemd_home` has
-    dropped out, because either one locks you out of `$HOME` at the next boot.
-    Submitting an empty password at the first prompt hands the conversation back
-    to PAM, which is how the enrolled FIDO2 token (`homectl inspect` → *FIDO2
-    Token*) gets asked for instead of the passphrase.
-  - **Session cache.** `skip_selection` is on, so the greeter opens straight on
-    the password prompt for whoever logged in last. That choice is cached under
-    `/var/cache/regreet`, which the script creates for the `greeter` user; the
-    first boot after a wipe still shows the picker, and the user/session
-    dropdowns come back on any authentication failure.
-  Theming is minimal on purpose. ReGreet is a GTK app and cannot be driven by
-  `noctalia msg greeter-sync`, so `[shell.greeter_sync] auto_sync` is off and
-  the greeter just uses a dark Adwaita. No custom cursor either, because Bibata
-  only exists under `~/.local/share/icons` — inside the encrypted home the
-  greeter is there to unlock.
-- **Hyprland** is loaded by `~/.config/hypr/hyprland.lua`, which ships with
-  CachyOS and is *not* managed here. The files under `hypr/config/` are forks of
-  the CachyOS defaults, so upstream changes to those specific files no longer
-  reach this machine. The unforked ones (`animations`, `autostart`, `colors`,
-  `environment`, `inputs`) are still owned by CachyOS.
-  Autostart uses XDG `.desktop` entries rather than `autostart.lua` because the
-  session runs under UWSM. The `hyprbars` title bars come from the hyprpm
-  plugin script, which has to run inside a live session and rebuilds the
-  plugin whenever Hyprland is updated.
-
-## What changed from Nix
-
-- `environment.systemPackages` → split between `~/.Brewfile` and mise.
-- `environment.variables` / `fish_add_path` / `home.sessionPath` → mise `[env]`.
-- `programs.{git,starship,fish,zsh}` → dotfiles under `home/`.
-- `system.defaults` / `security.pam` / `security.pki` → `run_*` scripts.
-- `launchd.agents.rustic-backup` → managed LaunchAgent plist + reload script.
-- `git-tool` flake input → mise `github:SierraSoftworks/git-tool`.
+- **noctalia's `config.toml` is managed here**, which is unusual for this repo,
+  because its lock screen and idle sections have to stay off. noctalia's own
+  settings UI writes to the same file, so `chezmoi diff` after tweaking anything
+  in the GUI is worth a look before `chezmoi apply` reverts it. Its session
+  panel entries are `action = "command"` rather than the built-in `lock`,
+  because noctalia strips the built-ins whenever its own locker is disabled —
+  *before* it reads any `command` override.
+- **`~/.config/hypr/hyprland.lua` belongs to CachyOS.** The files under
+  `hypr/config/` are forks, so upstream changes to those specific files no
+  longer reach the machine. `animations`, `autostart`, `colors`, `environment`,
+  and `inputs` are still CachyOS's. Autostart goes through XDG `.desktop`
+  entries because the session runs under UWSM, and `hyprbars` has to be rebuilt
+  by hyprpm inside a live session whenever Hyprland updates.
+- **ReGreet's theming is deliberately minimal.** It is a GTK app that noctalia
+  cannot sync, and anything under `~/.local/share` — fonts, the Bibata cursor —
+  lives inside the encrypted home this screen exists to unlock.
+  `skip_selection` caches the last user under `/var/cache/regreet`, so the first
+  boot after a wipe still shows the picker.
+- **SDDM stays installed** as the fallback. `systemctl disable greetd &&
+  systemctl enable sddm` reverts the greeter, and `cage -s` keeps VT switching
+  available if it ever wedges.
+- **Not replaced on Linux**: `little-snitch` has no equivalent (opensnitch is
+  the closest), `orbstack` becomes a native Docker install, `grpcurl`'s AUR
+  build fails, and WhatsApp has no official client so Flathub's ZapZap stands
+  in.
