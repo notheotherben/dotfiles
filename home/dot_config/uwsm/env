@@ -16,3 +16,16 @@ export NVD_BACKEND=direct # Required by libva-nvidia-driver (nvidia-vaapi-driver
                           # avoids an upstream regression. See
                           # https://wiki.hypr.land/Nvidia/#va-api-hardware-video-acceleration
 export __GL_GSYNC_ALLOWED=1 # Controls if G-Sync capable monitors should use Variable Refresh Rate (VRR)
+
+# Firefox picks its idle inhibitor backend by auto-detection, and the first
+# candidate -- FreeDesktopScreensaver -- always wins here because hypridle owns
+# the org.freedesktop.ScreenSaver DBus name. That path is unreliable: hypridle
+# only samples the inhibit count at the instant a timer fires, and Firefox drops
+# and retakes its wakelock constantly during playback (ad breaks and MSE source
+# switches leave it at zero locks for seconds at a time), so a windowed video
+# blanks the screen whenever the 60s timer lands in one of those gaps.
+# WaylandIdleInhibit uses zwp_idle_inhibit_manager_v1 instead, and Hyprland
+# restarts the idle countdown when an inhibitor is released, so the flapping
+# cannot expire it. Fullscreen was already covered by the idle_inhibit window
+# rule in dot_config/hypr/config/windowrules.lua.
+export MOZ_WAKE_LOCK_TYPE=WaylandIdleInhibit
