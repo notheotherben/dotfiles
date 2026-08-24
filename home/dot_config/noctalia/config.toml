@@ -30,7 +30,18 @@ thickness = 35
 enabled = false
 
 # Idle belongs to hypridle now. Leaving these on would arm a second set of
-# timers alongside it.
+# timers alongside it -- noctalia was blanking the screens at 180s while
+# hypridle was still counting towards its 300s lock.
+#
+# This file is only half the story. noctalia merges every *.toml in the config
+# dir and then lays ~/.local/state/noctalia/settings.toml over the top, so
+# anything ever touched in the Settings UI outranks whatever is written here.
+# That state file is not managed by chezmoi, and it had idle re-enabled behind
+# this block. Check the effective values with `noctalia config export`.
+#
+# Do not reach for `noctalia msg config-reload` to apply a change: it drops
+# every state override, which takes the bar layout, dock, theme and wallpaper
+# back to this file's defaults. Restart noctalia instead.
 [idle]
 
     [idle.behavior.lock]
