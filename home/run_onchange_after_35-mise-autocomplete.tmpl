@@ -2,9 +2,6 @@
 # Install mise's autocomplete scripts for the current shell. Re-runs whenever mise's config changes.
 #
 # mise config hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
-{{ if eq .chezmoi.os "linux" -}}
-# conf.d hash: {{ include "dot_config/mise/conf.d/linux.toml" | sha256sum }}
-{{ end -}}
 set -eu
 
 {{ if eq .chezmoi.os "darwin" -}}
