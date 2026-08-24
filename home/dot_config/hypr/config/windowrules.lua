@@ -16,9 +16,10 @@ hl.window_rule({
 local gamingApps = "^(steam_app.*|gamescope)$"
 local gamingWorkspace = "name:gaming"
 
--- VoiceAttack (Steam appid 583010) is a desktop app rather than a game, so it is
--- excluded from the gaming rules below and given its own rules instead.
-local voiceAttackApp    = "^(steam_app_583010)$"
+-- VoiceAttack (Steam appid 583010; VoiceAttack 2 is 3046550) is a desktop app
+-- rather than a game, so it is excluded from the gaming rules below and given its
+-- own rules instead.
+local voiceAttackApp    = "^(steam_app_(583010|3046550))$"
 local notVoiceAttackApp = "negative:" .. voiceAttackApp
 
 -- VoiceAttack: floating on workspace 5, including its dialogs and tooltips.
