@@ -10,6 +10,12 @@ hl.config({
         col = {
             splash = CACHYLGREEN,
         },
+        -- Input has to be able to undo DPMS on its own. Without these, the only
+        -- thing that brings the panels back is an idle daemon on-resume command,
+        -- and a stale or mis-parsed one leaves the screens dark with no way back
+        -- in short of power-cycling the monitors.
+        mouse_move_enables_dpms = true,
+        key_press_enables_dpms = true,
         middle_click_paste = false,
         enable_swallow = true,
         swallow_regex = "(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)",
