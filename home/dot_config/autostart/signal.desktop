@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Signal Beta
+Name=Signal
 Comment=Placed on the communication scratchpad by Hyprland
-Exec=signal-desktop-beta
+Exec=signal-desktop
 Terminal=false
 X-GNOME-Autostart-enabled=true
