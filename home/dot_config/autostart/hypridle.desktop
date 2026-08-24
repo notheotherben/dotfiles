@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=hypridle
-Comment=Idle timers for hyprlock; noctalia's own idle manager is disabled
-Exec=hypridle
-Terminal=false
-X-GNOME-Autostart-enabled=true

@@ -1,0 +1,36 @@
+#!/bin/sh
+# One hypridle, on the packaged systemd unit, restarted whenever its config changes.
+#
+# hypridle parses hypridle.conf once at startup and never re-reads it, so an
+# edited file changes nothing until the daemon is restarted: the old process
+# keeps firing the timers it was launched with. That is how a `timeout = 60`
+# DPMS rule stayed live for a whole session after it had been replaced on disk.
+#
+# The XDG autostart entry is gone in favour of hypridle.service because the two
+# launch paths cannot see each other. Starting the unit while the autostart copy
+# was already running left two daemons on two different configs, both firing
+# their own lock and DPMS commands at the session.
+{{ if eq .chezmoi.os "linux" -}}
+#
+# config hash: {{ include "dot_config/hypr/hypridle.conf" | sha256sum }}
+set -eu
+
+if [ ! -f /usr/lib/systemd/user/hypridle.service ]; then
+    echo "!! hypridle.service not found — skipping (pacman should install hypridle)"
+    exit 0
+fi
+
+# The old launch path. Both are no-ops once it is gone.
+rm -f "$HOME/.config/autostart/hypridle.desktop"
+systemctl --user stop app-hypridle@autostart.service 2>/dev/null || true
+
+echo "==> Reloading hypridle.service"
+systemctl --user daemon-reload
+systemctl --user enable hypridle.service
+
+# ConditionEnvironment=WAYLAND_DISPLAY means the unit only runs inside a
+# session; outside one, enabling it is all that can usefully be done here.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    systemctl --user restart hypridle.service
+fi
+{{ end -}}
