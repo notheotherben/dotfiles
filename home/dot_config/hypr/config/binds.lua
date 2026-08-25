@@ -9,7 +9,7 @@ local launchPrefix = "uwsm app -- " -- if you are not using UWSM, make this empt
 -- Window manipulation
 hl.bind(mainMod .. " + Escape",      hl.dsp.exec_cmd("hyprctl kill"))
 hl.bind(mainMod .. " + Q",           hl.dsp.window.close())
-hl.bind(mainMod .. " + H", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + H",           hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + D",           hl.dsp.window.fullscreen({ mode = 1 }))
 hl.bind(mainMod .. " + F",           hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + J",           hl.dsp.layout("togglesplit"))
@@ -20,8 +20,13 @@ hl.bind(mainMod .. " + Right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + Up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + Down",  hl.dsp.focus({ direction = "down" }))
 hl.bind("ALT + Tab",           hl.dsp.window.cycle_next())
-hl.bind("CONTROL + ALT + Tab",   hl.dsp.exec_cmd(noctCall .. "window-switcher"))
+hl.bind("CONTROL + ALT + Tab", hl.dsp.exec_cmd(noctCall .. "window-switcher"))
 
+-- Resize windows
+hl.bind(mainMod .. " + ALT + Up",  hl.dsp.layout("colresize +conf"))
+hl.bind(mainMod .. " + ALT + Down",  hl.dsp.layout("colresize -conf"))
+hl.bind(mainMod .. " + ALT + Left",  hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + ALT + Right", hl.dsp.layout("swapcol r"))
 
 -- Move active window around workspaces & monitors
 hl.bind(mainMod .. " + SHIFT + Up",                   hl.dsp.window.move({ direction = "u" }))

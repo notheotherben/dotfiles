@@ -92,8 +92,8 @@ hl.window_rule({
 -- Opacity Overrides
 local terminals = "^(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)$"
 
-hl.window_rule({ match = { class = "^(firefox|zen)$" }, opacity = "1.0 override", idle_inhibit = "fullscreen" })
-hl.window_rule({ match = { class = terminals }, opacity = "1.0 override" }) -- Override opacity in favor of terminal settings for opacity. If your terminal doesn't support transparency, you can remove this rule.
+hl.window_rule({ match = { class = "^(firefox|zen)$" }, opacity = "1.0 override", idle_inhibit = "fullscreen", scrolling_width = 0.8 })
+hl.window_rule({ match = { class = terminals }, opacity = "1.0 override", scrolling_width = 0.333 }) -- Override opacity in favor of terminal settings for opacity. If your terminal doesn't support transparency, you can remove this rule.
 hl.window_rule({ match = { class = "^(mpv|org.kde.haruna|.*plex.*|org\\.kde\\.gwenview|.*vlc.*)$" }, opacity = "1.0 override" })
 
 -- Float Utility Windows
@@ -139,7 +139,7 @@ hl.window_rule({
 
 -- Todoist belongs to the coding-reference workspace; its width is set from an
 -- event handler in workspaces.lua.
-hl.window_rule({ match = { class = "^(todoist)$" }, workspace = "4" })
+hl.window_rule({ match = { class = "^(todoist)$" }, workspace = "4", scrolling_width = 0.2 })
 
 -- Communication scratchpad: four tiled windows on MONITOR2, toggled with SUPER + comma.
 local commsApps = {

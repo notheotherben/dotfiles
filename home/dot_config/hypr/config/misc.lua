@@ -6,6 +6,9 @@ hl.config({
         mfact = 0.76,
         focus_master_on_close = true
     },
+    scrolling = {
+        explicit_column_widths = "0.2, 0.333, 0.5, 0.667, 0.8, 1.0",
+    },
     misc = {
         col = {
             splash = CACHYLGREEN,
