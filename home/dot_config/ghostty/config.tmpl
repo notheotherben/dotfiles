@@ -1,6 +1,10 @@
 confirm-close-surface = false
 window-padding-x = 5
-shell-integration-features = true
+# Everything except ssh-terminfo: its wrapper opens a hidden extra SSH
+# connection (stderr discarded) to install xterm-ghostty terminfo, which
+# swallows Tailscale SSH auth prompts and hangs the session. ssh-env still
+# sends a safe TERM=xterm-256color to remotes.
+shell-integration-features = cursor,sudo,title,path,ssh-env
 
 # Ctrl+C/Ctrl+V belong to the shell, so copy/paste lives on Ctrl+Shift.
 keybind = ctrl+shift+c=copy_to_clipboard:mixed
