@@ -1,0 +1,180 @@
+#!/bin/sh
+# OpenTelemetry on the desktop: a native otelcol-contrib service shipping
+# journald logs and host metrics to telemetry.sierrasoftworks.com, plus the
+# eBPF profiler (a privileged docker container, mirroring infra-ansible's
+# otel_ebpf_profiler role) for whole-host continuous profiling.
+#
+# The collector runs the pinned GitHub release binary: the AUR otelcol-contrib
+# package has been flagged out-of-date for months, and running it in docker
+# would need the /host chroot dance the cluster job does just so the journald
+# receiver can exec journalctl — native, it simply uses the host's.
+#
+# Configs are chezmoi-managed under ~/.config/otelcol but *installed* to /etc,
+# because $HOME is systemd-homed LUKS: locked at boot, which is exactly when
+# these system services start. docker.service stays disabled; the profiler
+# unit's Requires= starts it on demand.
+{{ if eq .chezmoi.os "linux" -}}
+#
+# Re-run when either config changes:
+# otelcol config hash:  {{ include "dot_config/otelcol/otelcol.yaml" | sha256sum }}
+# profiler config hash: {{ include "dot_config/otelcol/profiler.yaml" | sha256sum }}
+set -eu
+
+# Both halves of the same collector release train; bump together, and keep
+# roughly current with the cluster's otelcol pack (see infra-ansible's
+# otel_ebpf_profiler role for the same note).
+otelcol_version="0.159.0"
+profiler_image="otel/opentelemetry-collector-ebpf-profiler"
+profiler_version="0.159.0"
+
+otelcol_bin="/usr/local/bin/otelcol-contrib"
+
+# install(1) refuses a pipe as its source, so stage stdin in a temp file first.
+install_stdin() {
+  dest="$1"
+  tmp="$(mktemp)"
+  cat >"$tmp"
+  sudo install -m 0644 -o root -g root "$tmp" "$dest"
+  rm -f "$tmp"
+}
+
+# --------------------------------------------------------------------------
+# otelcol-contrib binary, pinned and checksum-verified.
+# --------------------------------------------------------------------------
+have="$("$otelcol_bin" --version 2>/dev/null | awk '{print $NF}' || true)"
+if [ "$have" != "$otelcol_version" ]; then
+  echo "==> Installing otelcol-contrib $otelcol_version (have: ${have:-none})"
+  tmp="$(mktemp -d)"
+  base="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${otelcol_version}"
+  asset="otelcol-contrib_${otelcol_version}_linux_amd64.tar.gz"
+  curl -fsSL -o "$tmp/$asset" "$base/$asset"
+  curl -fsSL -o "$tmp/$asset.sha256" "$base/$asset.sha256"
+  want_sum="$(awk '{print $1}' "$tmp/$asset.sha256")"
+  got_sum="$(sha256sum "$tmp/$asset" | awk '{print $1}')"
+  if [ "$want_sum" != "$got_sum" ]; then
+    echo "!! Checksum mismatch for $asset (want $want_sum, got $got_sum)"
+    rm -rf "$tmp"
+    exit 1
+  fi
+  tar -xzf "$tmp/$asset" -C "$tmp" otelcol-contrib
+  sudo install -m 0755 -o root -g root "$tmp/otelcol-contrib" "$otelcol_bin"
+  rm -rf "$tmp"
+fi
+
+# --------------------------------------------------------------------------
+# Collector: validate, install config, unit.
+# --------------------------------------------------------------------------
+echo "==> Validating the collector config"
+# sudo because validation exercises the file_storage extension's directory
+# checks under /var/lib/otelcol.
+sudo install -d -m 0750 /var/lib/otelcol
+sudo "$otelcol_bin" validate --config "$HOME/.config/otelcol/otelcol.yaml"
+
+echo "==> Installing /etc/otelcol/config.yaml"
+sudo install -d -m 0755 /etc/otelcol
+sudo install -m 0644 -o root -g root \
+  "$HOME/.config/otelcol/otelcol.yaml" /etc/otelcol/config.yaml
+
+echo "==> Installing otelcol.service"
+install_stdin /etc/systemd/system/otelcol.service <<EOF
+# Managed by chezmoi — see run_onchange_after_49-otelcol.sh.tmpl.
+[Unit]
+Description=OpenTelemetry Collector (journald logs + host metrics)
+Documentation=https://opentelemetry.io/docs/collector/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=$otelcol_bin --config=/etc/otelcol/config.yaml
+Restart=always
+RestartSec=10
+
+# Runs as root: the journald receiver reads every unit's journal and the
+# hostmetrics process scraper reads other users' /proc entries. Everything
+# else is locked down — the only writable path is /var/lib/otelcol.
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+StateDirectory=otelcol
+PrivateTmp=true
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --------------------------------------------------------------------------
+# eBPF profiler: pull the pinned image, validate, install config, unit.
+# --------------------------------------------------------------------------
+echo "==> Pulling $profiler_image:$profiler_version"
+# The daemon is normally stopped (docker.service stays disabled); start it
+# for the pull, and pull explicitly so a version bump downloads the new
+# image before the service restarts into it — a broken pull fails here
+# instead of crash-looping the unit.
+sudo systemctl start docker.service
+sudo docker pull "$profiler_image:$profiler_version"
+
+echo "==> Validating the profiler config"
+sudo docker run --rm \
+  -v "$HOME/.config/otelcol/profiler.yaml:/etc/otel-ebpf-profiler.yaml:ro" \
+  "$profiler_image:$profiler_version" \
+  validate --config=/etc/otel-ebpf-profiler.yaml \
+  --feature-gates=service.profilesSupport
+
+echo "==> Installing /etc/otel-ebpf-profiler/config.yaml"
+sudo install -d -m 0755 /etc/otel-ebpf-profiler
+sudo install -m 0644 -o root -g root \
+  "$HOME/.config/otelcol/profiler.yaml" /etc/otel-ebpf-profiler/config.yaml
+
+echo "==> Installing otel-ebpf-profiler.service"
+install_stdin /etc/systemd/system/otel-ebpf-profiler.service <<EOF
+# Managed by chezmoi — see run_onchange_after_49-otelcol.sh.tmpl.
+[Unit]
+Description=OpenTelemetry eBPF profiler (continuous profiling agent)
+Documentation=https://github.com/open-telemetry/opentelemetry-ebpf-profiler
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# The profiler needs a privileged container with the host PID namespace to
+# load its eBPF programs and symbolise other processes' stacks — same shape
+# as infra-ansible's otel_ebpf_profiler role on the cluster nodes.
+ExecStartPre=-/usr/bin/docker rm -f otel-ebpf-profiler
+ExecStart=/usr/bin/docker run --rm --name otel-ebpf-profiler \\
+  --privileged \\
+  --pid=host \\
+  --network=host \\
+  --memory=512m \\
+  -v /etc/otel-ebpf-profiler/config.yaml:/etc/otel-ebpf-profiler.yaml:ro \\
+  -v /sys/kernel/debug:/sys/kernel/debug:ro \\
+  -v /sys/fs/cgroup:/sys/fs/cgroup:ro \\
+  --log-driver=journald --log-opt tag=otel-ebpf-profiler \\
+  $profiler_image:$profiler_version \\
+  --config=/etc/otel-ebpf-profiler.yaml \\
+  --feature-gates=service.profilesSupport
+ExecStop=/usr/bin/docker stop otel-ebpf-profiler
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --------------------------------------------------------------------------
+# Enable and (re)start both services.
+# --------------------------------------------------------------------------
+echo "==> Starting otelcol.service and otel-ebpf-profiler.service"
+sudo systemctl daemon-reload
+sudo systemctl enable otelcol.service otel-ebpf-profiler.service
+sudo systemctl restart otelcol.service otel-ebpf-profiler.service
+
+sleep 2
+systemctl --no-pager --lines=0 status otelcol.service otel-ebpf-profiler.service || {
+  echo "!! One of the services is unhealthy — journalctl -u otelcol -u otel-ebpf-profiler"
+  exit 1
+}
+{{ else -}}
+exit 0
+{{ end -}}

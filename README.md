@@ -102,6 +102,13 @@ config, the backup units.
   the prompt.
 - **pam_faillock** loosened to 10 failures / 60 seconds, for the reason in the
   next section.
+- **Host telemetry**: a native `otelcol-contrib` service ships journald logs
+  and host metrics to `telemetry.sierrasoftworks.com`, and the OTel eBPF
+  profiler (a privileged Docker container, as on the cluster nodes) adds
+  whole-host continuous profiling. `OTEL_EXPORTER_OTLP_*` is set session-wide
+  (`environment.d` + mise) so instrumented apps default to the same endpoint.
+  Configs live in `home/dot_config/otelcol/`; the install is
+  `run_onchange_after_49-otelcol`.
 
 ## Make it yours
 
@@ -195,6 +202,8 @@ home/
   run_onchange_after_45-pam-u2f         Yubikey PIN for sudo etc. (Linux)
   run_onchange_after_46-faillock        lockout thresholds        (Linux)
   run_onchange_after_47-greetd          ReGreet login screen      (Linux)
+  run_onchange_after_48-hypridle        (re)load hypridle         (Linux)
+  run_onchange_after_49-otelcol         OTel collector + profiler (Linux)
   run_once_after_50-touchid-sudo        Touch ID for sudo         (macOS)
   run_once_after_60-default-shell       chsh to fish
   run_onchange_after_70-rustic-schedule (re)load the backup job

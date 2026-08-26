@@ -1,0 +1,12 @@
+{{ if eq .chezmoi.os "linux" -}}
+# Linux-only mise configuration, merged on top of ~/.config/mise/config.toml.
+# (Renders empty on macOS, so chezmoi never creates it there.)
+
+[env]
+# Default OTLP destination for OTel-instrumented tools in any shell that
+# activates mise — including ssh/tty sessions, which environment.d/otel.conf
+# (the graphical-session counterpart) never reaches.
+OTEL_EXPORTER_OTLP_ENDPOINT = "https://telemetry.sierrasoftworks.com"
+OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
+OTEL_RESOURCE_ATTRIBUTES = "host.name={{ .chezmoi.hostname }}"
+{{ end -}}

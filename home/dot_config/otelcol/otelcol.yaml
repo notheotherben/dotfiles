@@ -1,0 +1,192 @@
+# Local OpenTelemetry Collector for the CachyOS desktop: journald logs and
+# host metrics, forwarded over OTLP HTTP to the cluster collector at
+# telemetry.sierrasoftworks.com, which owns all format parsing and the
+# fan-out to Loki/Mimir/Tempo, Honeycomb, and Grafana Cloud.
+#
+# Deliberately no OTLP (or any other) listener: apps on this machine ship
+# their own telemetry straight to telemetry.sierrasoftworks.com via the
+# OTEL_EXPORTER_OTLP_* session variables (environment.d/otel.conf and
+# mise conf.d/linux.toml), so this collector only gathers what the host
+# itself produces. Continuous profiles come from the separate
+# otel-ebpf-profiler service (see dot_config/otelcol/profiler.yaml).
+#
+# Derived from nomad-pack-registry's packs/otelcol/examples/
+# downstream-collector.yaml, and bound by the same contract (pack README,
+# "Downstream collectors"): locally-collected logs are stamped with
+# resource["log.source"] so the upstream Honeycomb branch groups them
+# per-source instead of minting a dataset per unit, and journald-derived
+# severity is exposed as attributes["level"] for the upstream severity
+# normalization to read back. Everything else — format sniffing, sampling
+# hints, metric datapoint stamping — happens upstream.
+#
+# This file is chezmoi-managed; run_onchange_after_49-otelcol.sh installs it
+# to /etc/otelcol/config.yaml (the copy the service reads — $HOME is
+# systemd-homed LUKS and locked at boot) and restarts the service.
+
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/storage
+    create_directory: true
+
+receivers:
+  # One catch-all receiver: every unit's logs (plus the kernel's) at
+  # info-or-higher, with no unit list to maintain. The desktop keeps a
+  # persistent journal, so the cursor in file_storage survives reboots
+  # without re-reading history.
+  journald:
+    directory: /var/log/journal
+    priority: info
+    storage: file_storage
+    convert_message_bytes: true
+    operators:
+      # Keep unit logs and kernel messages; drop unattached entries.
+      - type: filter
+        expr: '!("_SYSTEMD_UNIT" in keys(body)) and body._TRANSPORT != "kernel"'
+
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        mapping:
+          fatal: [0, 1, 2]
+          error: 3
+          warn: 4
+          info: [5, 6]
+          debug: 7
+        overwrite_text: true
+
+      - type: copy
+        from: body._SYSTEMD_UNIT
+        to: resource["service.name"]
+        if: '"_SYSTEMD_UNIT" in keys(body)'
+
+      # Interactive/cron sessions land in per-session scopes
+      # (session-c41.scope, …); use the syslog identifier (sshd, sudo,
+      # CRON, …) so service.name stays bounded and meaningful.
+      - type: copy
+        from: body.SYSLOG_IDENTIFIER
+        to: resource["service.name"]
+        if: '"SYSLOG_IDENTIFIER" in keys(body) and "_SYSTEMD_UNIT" in keys(body) and body._SYSTEMD_UNIT matches "^session-\\w+\\.scope$"'
+
+      # Kernel messages carry no unit; group them under a fixed name.
+      - type: add
+        field: resource["service.name"]
+        value: kernel
+        if: 'body._TRANSPORT == "kernel"'
+
+      # Marks the ingestion source; the upstream Honeycomb branch datasets
+      # logs by it instead of service.name.
+      - type: add
+        field: resource["log.source"]
+        value: journald
+
+      - type: add
+        field: resource["log.source"]
+        value: kernel
+        if: 'body._TRANSPORT == "kernel"'
+
+      # Containers logging via Docker's journald driver: prefer the container
+      # name, or an explicit tag when it isn't the default container-ID one.
+      - type: copy
+        from: body.CONTAINER_NAME
+        to: resource["service.name"]
+        if: '"CONTAINER_NAME" in keys(body)'
+      - type: copy
+        from: body.CONTAINER_TAG
+        to: resource["service.name"]
+        if: '"CONTAINER_TAG" in keys(body) and not (body.CONTAINER_TAG matches "^[0-9a-f]{12}$")'
+      - type: copy
+        from: body.IMAGE_NAME
+        to: resource["container.image"]
+        if: '"IMAGE_NAME" in keys(body)'
+
+      # Propagated from a container's log_format label (docker run
+      # --log-opt labels=log_format); opts the stream into the upstream
+      # parsing rules.
+      - type: move
+        from: body.LOG_FORMAT
+        to: attributes["log.format"]
+        if: '"LOG_FORMAT" in keys(body)'
+
+      # Join multiline records (stack traces etc.); this has to happen at
+      # collection time, so it can't be deferred upstream.
+      - type: recombine
+        combine_field: body.MESSAGE
+        source_identifier: resource["service.name"]
+        is_first_entry: body.MESSAGE matches "^[^\\s]"
+
+      - type: move
+        from: body.MESSAGE
+        to: body
+
+  host_metrics:
+    collection_interval: 1m
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+        cpu_average: true
+
+      memory:
+      network:
+      paging:
+      process:
+        mute_process_name_error: true
+        mute_process_io_error: true
+        mute_process_exe_error: true
+        mute_process_user_error: true
+        scrape_process_delay: 5m
+        metrics:
+          process.disk.io:
+            enabled: false
+
+processors:
+  batch:
+
+  # Stamps host.name (and os.type) on everything collected here; without it
+  # the upstream transform would default nil host names to the cluster
+  # node's own NODE_NAME and this machine's metrics would be mislabelled.
+  resource_detection:
+    detectors: [env, system]
+
+  # Expose journald-derived severity as the level attribute; the upstream
+  # collector rebuilds severity_text/severity_number from it after running
+  # its own parsing rules.
+  transform/logs:
+    error_mode: ignore
+    log_statements:
+      - statements:
+          - set(log.attributes["level"], log.severity_text) where log.severity_text != ""
+
+exporters:
+  # The cluster collector; it fans out to Loki/Mimir/Tempo, Honeycomb, and
+  # Grafana Cloud, so nothing is exported from here directly. The persistent
+  # queue rides out the offline stretches a desktop actually has (suspend,
+  # reboots, flaky Wi-Fi) instead of dropping whatever was in memory.
+  otlp_http/sierrasoftworks:
+    endpoint: https://telemetry.sierrasoftworks.com
+    sending_queue:
+      storage: file_storage
+
+service:
+  telemetry:
+    metrics:
+      level: none
+    logs:
+      # warn rather than error so export retries/backpressure show up in the
+      # journal (and therefore in Loki, via this very pipeline).
+      level: warn
+      encoding: json
+      disable_stacktrace: true
+
+  pipelines:
+    logs:
+      receivers: [journald]
+      processors: [resource_detection, transform/logs, batch]
+      exporters: [otlp_http/sierrasoftworks]
+
+    metrics:
+      receivers: [host_metrics]
+      processors: [resource_detection, batch]
+      exporters: [otlp_http/sierrasoftworks]
+
+  extensions: [file_storage]

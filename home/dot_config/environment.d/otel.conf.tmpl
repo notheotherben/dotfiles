@@ -1,0 +1,15 @@
+{{ if eq .chezmoi.os "linux" -}}
+# ~/.config/environment.d/otel.conf
+# Default OTLP destination for every OTel-instrumented app in the session.
+# environment.d feeds the systemd user manager, and uwsm launches Hyprland as
+# a user unit, so anything started inside the graphical session (terminals
+# included) inherits these. Shells outside the session (ssh, tty) get the
+# same values from mise — see dot_config/mise/conf.d/linux.toml.
+#
+# host.name is stamped explicitly because SDKs don't set it, and the cluster
+# collector maps nil host names to its own node's NODE_NAME — which would
+# mislabel this machine's telemetry.
+OTEL_EXPORTER_OTLP_ENDPOINT=https://telemetry.sierrasoftworks.com
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_RESOURCE_ATTRIBUTES=host.name={{ .chezmoi.hostname }}
+{{ end -}}

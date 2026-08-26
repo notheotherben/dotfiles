@@ -1,0 +1,29 @@
+# OpenTelemetry eBPF profiler for the CachyOS desktop — whole-host
+# continuous profiling, mirroring infra-ansible's otel_ebpf_profiler role
+# (which runs the same distribution on the cluster nodes).
+#
+# Unlike the cluster nodes, there is no node-local OTLP listener to forward
+# through: profiles ship straight to the cluster collector's public gRPC
+# ingest (Caddy routes gRPC on telemetry.sierrasoftworks.com to the otlpgrpc
+# port — the same path the analytics service uses), and its `profiles`
+# pipeline passes them to Pyroscope. TLS is the exporter default; no
+# `insecure` override here because this crosses the public internet.
+#
+# This file is chezmoi-managed; run_onchange_after_49-otelcol.sh installs it
+# to /etc/otel-ebpf-profiler/config.yaml and restarts the service.
+
+receivers:
+  # Whole-host stack sampling. 19 Hz keeps the profiling overhead
+  # negligible; a prime rate avoids sampling in lockstep with periodic work.
+  profiling:
+    samples_per_second: 19
+
+exporters:
+  otlp_grpc:
+    endpoint: telemetry.sierrasoftworks.com:443
+
+service:
+  pipelines:
+    profiles:
+      receivers: [profiling]
+      exporters: [otlp_grpc]
