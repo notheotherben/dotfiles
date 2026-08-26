@@ -1,5 +1,5 @@
 ---
-name: troubleshooting
+name: troubleshoot
 description: Systematic root-cause troubleshooting — frame the failing flow, bisect it against observable landmarks, and test each hypothesis with a designed experiment instead of guessing. Use this whenever something is broken, failing, erroring, crashing, hanging, flaky, slow, or "used to work and now doesn't" — build and CI failures, runtime errors, integration and dependency problems, environment or configuration drift, performance regressions, and mystery behaviour in someone else's system. Especially important when the cause is not obvious, when a first fix didn't work, when investigation is going in circles, or when you catch yourself about to try another plausible-sounding change.
 ---
 
