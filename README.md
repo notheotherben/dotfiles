@@ -104,8 +104,10 @@ config, the backup units.
   next section.
 - **Host telemetry**: a native `otelcol-contrib` service ships journald logs
   and host metrics to `telemetry.sierrasoftworks.com`, and the OTel eBPF
-  profiler (a privileged Docker container, as on the cluster nodes) adds
-  whole-host continuous profiling. `OTEL_EXPORTER_OTLP_*` is set session-wide
+  profiler (the `otelcol-ebpf-profiler` release binary, run as root with a
+  `kptr_restrict` override — CachyOS's default of 2 blanks `/proc/kallsyms`
+  even for root) adds whole-host continuous profiling.
+  `OTEL_EXPORTER_OTLP_*` is set session-wide
   (`environment.d` + mise) so instrumented apps default to the same endpoint.
   Configs live in `home/dot_config/otelcol/`; the install is
   `run_onchange_after_49-otelcol`.

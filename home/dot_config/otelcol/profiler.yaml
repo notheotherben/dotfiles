@@ -1,6 +1,8 @@
 # OpenTelemetry eBPF profiler for the CachyOS desktop — whole-host
-# continuous profiling, mirroring infra-ansible's otel_ebpf_profiler role
-# (which runs the same distribution on the cluster nodes).
+# continuous profiling with the same collector distribution infra-ansible's
+# otel_ebpf_profiler role runs on the cluster nodes, though natively (the
+# otelcol-ebpf-profiler release binary) rather than in a privileged
+# container.
 #
 # Unlike the cluster nodes, there is no node-local OTLP listener to forward
 # through: profiles ship straight to the cluster collector's public gRPC
