@@ -18,13 +18,21 @@ Natural prior: the migration broke it.
 → .NET application → speech engine. Explicitly assumed working: the mic hardware and desktop
 audio stack — *and that assumption was written down*, so it could be revisited.
 
-**Landmarks on the failing flow.** Sketched before probing anything. Note these are *conceptual*
-— no source code had been read, and none needed to be:
+**Landmarks on the failing flow.** Mapped before probing anything, as widget C. Note these are
+*conceptual* — no source code had been read, and none needed to be. The blocks below give each
+widget's content in shorthand; the markup itself lives in the skill's Templates section.
 
 ```
-[mic] → [PipeWire] → [container] → [Wine audio] → [app opens capture] → [engine] → [recognition]
-  ?          ?            ?             ?                  ?               ?            ✗
-                                                                                    reported
+widget C — opening frame
+  ?  mic
+  ?  PipeWire
+  ?  container
+  ?  Wine audio
+  ?  app opens capture
+  ?  engine
+  ✗  recognition                  reported symptom
+  open      migration rewrote 8,000 symlinks · mic or permissions · engine-side fault
+  rejected  —
 ```
 
 Everything upstream of the symptom is unknown. That is the correct starting state, and the whole
@@ -53,11 +61,12 @@ engines, one machine, one working. Everything they share — the entire audio st
 and the fault had to live in what differed:
 
 ```
-[mic] → [PipeWire] → [container] → [Wine audio] → [app opens capture] → [engine] → [recognition]
-  ✓          ✓            ✓             ✓                  ✗               ?            ✗
-        cleared by the working engine (shared path)       never       ↑
-                                                        attempted    divergence in here
+widget A
+  ✓ mic   ✓ PipeWire   ✓ container   ✓ Wine audio   ✗ app opens capture   ? engine   ✗ recognition
+  ✗ no capture stream opened                        4 of 7 cleared · 2 probes
 ```
+
+Seven landmarks, so nothing elides yet.
 
 Two probes, and the search space went from the entire stack to one component. Neither probe
 required reading a line of source.
@@ -126,11 +135,15 @@ The landmarks had by now been refined several times — the coarse conceptual ch
 had been replaced, in the region that mattered, by much finer ones:
 
 ```
-[app start] → [engine loads] → [deps resolve] → [deps load] → [ORT init] → [recognition]
-     ✓              ✓                ✓               ✓             ✗            ✗
-                                                            ↑
-                                          MSVCP140 executing, faults here
+widget A — ten landmarks now, so the cleared run elides
+  …   ✓ deps load   ✗ ORT init   ✗ recognition
+  ✗ MSVCP140 executing, faults here          8 of 10 cleared · 6 probes
 ```
+
+Note what elision does and does not drop. The seven cleared landmarks upstream collapse into one
+`…`; `deps load` survives because it sits immediately upstream of the failure, which is the
+boundary worth watching. The scale the elided run would have conveyed is carried by the counter
+instead — `8 of 10 cleared` says more about progress than seven green segments would.
 
 This is the normal shape of an investigation: coarse landmarks everywhere at the start, and fine
 landmarks only in the span you have narrowed to. Enriching them everywhere up front would have
@@ -155,9 +168,23 @@ With a one-interval hypothesis, the OODA loop closes quickly:
 - **Experiment.** Install the newer runtime *through its installer* — the real mechanism, not a
   file copy — and re-run the isolated load.
 - **Prediction, stated first.** If the hypothesis holds, initialisation completes. If it fails
-  identically, the hypothesis is dead and the span must be subdivided differently.
+  identically, the hypothesis is rejected and the span must be subdivided differently.
 - **Result.** The environment had **14.28**; the library needed **14.4x**. After installing it,
   initialisation completed and the app opened a live capture stream.
+
+```
+widget C — verdict
+  ✓  app start → engine loads → deps resolve → deps load    cleared, cheapest probe each
+  ✓  ORT init                                               completes against 14.4x
+  ✓  recognition                                            capture stream opens
+  open      —
+  rejected  migration rewrote the symlinks · mic or permissions ·
+            stale NOTPRESENT device id · library incompatible with Wine
+```
+
+The rejected column is where the three wrong turns end up. Leaving them visible is the point —
+an operator scanning the verdict can see which explanations were considered and discarded, and
+challenge any discard they disagree with.
 
 ## What the method would have done differently
 

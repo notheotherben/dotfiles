@@ -52,18 +52,19 @@ in an investigation. Five artifacts are therefore mandatory, in user-visible out
 private reasoning. Producing the right conclusion without them is still a failure, because
 nobody could have caught you being wrong along the way:
 
-1. **Frame first, visibly.** The first message of an investigation contains the flow sketch
-   with its landmarks, the explicit list of what you are assuming works, and your harvest
+1. **Frame first, visibly.** The first message of an investigation contains the map (widget C
+   below) with its landmarks, the explicit list of what you are assuming works, and your harvest
    questions for the operator — before or alongside the first probes, never after them.
 2. **Commit before you probe.** Every probe, or batch of parallel probes, is preceded in
-   visible text by the probe-commitment template below: observed, hypotheses (with any killed
+   visible text by the probe-commitment template below: observed, hypotheses (with any rejected
    for free by evidence already held), what runs now, and what each outcome will mean.
    Written before the results exist — batching probes is fine, one block covers the batch;
    reconstructing the block after seeing results is not.
 3. **Claim narrowly after.** After each result, one line stating what was cleared, in the
    narrowest terms the evidence supports.
-4. **Keep the map current.** When any landmark's mark changes (✓/✗/?), show the updated
-   sketch with the evidence for each mark.
+4. **Keep the map current.** When any landmark's mark changes (✓/✗/?), re-emit the compact
+   map (widget A below). Between map updates, carry observations, hypotheses and experiments in
+   ordinary prose — a sentence or two each, not another widget.
 5. **Gate the verdict.** Before declaring a root cause: re-walk *every* observation collected
    so far and check the story predicts each one — a story contradicted by evidence you
    already hold is dead, however well it fits the evidence that suggested it. State what
@@ -86,7 +87,7 @@ narrating instead of investigating.
 
 ```
 ## Frame
-[flow sketch with landmarks marked ✓/✗/?]
+[map — widget C]
 Assuming works:  <list — each entry is an unexamined region>
 Known-good ref:  <what worked, when, in which domain — or "none">
 Questions:       <operator harvest questions from §2>
@@ -97,7 +98,7 @@ Questions:       <operator harvest questions from §2>
 ```
 Observed:   <raw signal, quoted; interpretation kept out>
 Hypotheses: H1 <...>   H2 <...>   H3 <...>
-Killed free: H_n — contradicted by <observation already held>
+Rejected:   H_n — contradicted by <observation already held>
 Probing:    <what runs now>
 Expect:     H1 → <outcome>;  H2 → <outcome>;  ...
 ```
@@ -118,6 +119,80 @@ Suspected:    <plausible, untested — including any human-action links>
 Survives:     re-walked all <N> observations; <any that needed explaining, or "all predicted">
 Falsified by: <the result that would overturn this>
 ```
+
+### Map widgets
+
+The map is rendered as an inline visual, not ASCII. Two variants with different jobs, so that
+the expensive one is rare and the cheap one can fire as often as the protocol demands.
+
+**Widget C — the full map.** Emitted exactly twice: in the opening frame, and again at the
+verdict. Left column is the flow, one row per landmark, most-upstream first; right column is the
+hypothesis inventory, split into open and rejected. Rows use `ti-check` (cleared), `ti-search`
+(unknown), `ti-x` (failing). Collapse contiguous cleared landmarks into a single row
+(`steam → runtime → proton`) so the uncleared space stays visually dominant. Add a chip with
+`ti-eye-off` for any observability gap you hit.
+
+```html
+<style>
+.row{display:flex;align-items:center;gap:8px;padding:5px 0}
+.ev{font-size:11px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
+.dead{text-decoration:line-through;color:var(--text-muted)}
+.hd{font-size:11px;color:var(--text-muted);margin-bottom:6px}
+</style>
+<div style="padding:1rem 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px">
+  <div>
+    <div class="row"><i class="ti ti-check" aria-hidden="true" style="font-size:15px;color:var(--text-success)"></i><span style="font-size:13px">STAGE &rarr; STAGE</span><span class="ev">EVIDENCE</span></div>
+    <div class="row"><i class="ti ti-search" aria-hidden="true" style="font-size:15px;color:var(--text-muted)"></i><span style="font-size:13px">STAGE</span><span class="ev">unknown</span></div>
+    <div class="row" style="background:var(--bg-danger);border-radius:var(--radius);padding:6px 8px"><i class="ti ti-x" aria-hidden="true" style="font-size:15px;color:var(--text-danger)"></i><span style="font-size:13px;color:var(--text-danger)">STAGE</span><span class="ev" style="color:var(--text-danger)">SYMPTOM</span></div>
+  </div>
+  <div>
+    <div class="hd">open</div>
+    <div class="row" style="padding:3px 0"><i class="ti ti-arrow-right" aria-hidden="true" style="font-size:14px;color:var(--text-accent)"></i><span style="font-size:12px">HYPOTHESIS</span></div>
+    <div class="hd" style="margin-top:10px">rejected</div>
+    <div class="row" style="padding:3px 0"><span class="dead" style="font-size:12px">HYPOTHESIS</span></div>
+  </div>
+</div>
+```
+
+**Widget A — the incremental update.** Emitted after each probe that changes a mark. It answers
+one question — which segment just changed colour — and carries no evidence text; that goes in
+the one-line `Cleared:` claim beside it. Segment fills: cleared `var(--bg-success)`, unknown
+`var(--surface-1)`, failing `var(--text-danger)`.
+
+```html
+<style>
+.seg{flex:1;min-width:0}
+.bar{height:8px;border-radius:4px}
+.cap{font-size:11px;margin-top:7px;color:var(--text-secondary);line-height:1.35;text-align:center}
+</style>
+<div style="padding:1rem 0">
+  <div style="display:flex;gap:5px;margin-bottom:8px">
+    <div class="seg"><div class="bar" style="background:var(--bg-success)"></div><div class="cap">STAGE</div></div>
+    <div class="seg" style="flex:0 0 28px"><div class="bar" style="background:var(--surface-1)"></div><div class="cap">&hellip;</div></div>
+    <div class="seg"><div class="bar" style="background:var(--surface-1)"></div><div class="cap" style="color:var(--text-muted)">STAGE</div></div>
+    <div class="seg"><div class="bar" style="background:var(--text-danger)"></div><div class="cap" style="color:var(--text-danger)">STAGE</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:var(--radius);background:var(--bg-danger);color:var(--text-danger)"><i class="ti ti-x" aria-hidden="true" style="font-size:13px"></i>SYMPTOM</span>
+    <span style="font-size:11px;color:var(--text-muted)">N of M cleared &middot; P probes</span>
+  </div>
+</div>
+```
+
+**Elision.** Widget A holds about seven segments before labels stop being readable. Past that,
+collapse each *contiguous run* of already-cleared landmarks into one narrow `…` segment
+(`flex:0 0 28px`, as in the template). Elide only cleared runs — never a run containing an
+unknown or failing landmark, and never the landmark immediately upstream of the failure, since
+that is the boundary the operator is watching. If a probe reopens anything inside an elided run,
+expand it again.
+
+**Between the widgets, use prose.** Observations, hypotheses and experiments are a sentence or
+two of ordinary text, not a visual. A typical investigation reads: widget C → "I'll check
+whether the prefix changed since it last worked" → "no, rebuilt on Aug 23" → widget A → "then
+the other candidate is the game itself; checking its mtime" → … → widget C.
+
+**Fallback.** If no inline-visual tool is available, drop to ASCII — a row of `[stage]` boxes, a
+row of ✓/✗/?, a row of evidence. The protocol is what matters; the rendering is not.
 
 ## 1. Frame the problem
 
@@ -147,21 +222,12 @@ transition. Good landmarks are *observable* — if you cannot currently observe 
 a landmark; it is either a gap to instrument or a hint that you should pick a nearby checkpoint
 you *can* see.
 
-**Sketch the system and its landmarks before you probe.** A few lines of ASCII are enough. The
-diagram is not decoration — it is your search space made visible, and it is what stops you
-losing track of which regions are actually cleared:
-
-```
-[client] → [ lb ] → [ api ] → [ worker ] → [  db  ] → [ cache ]
-    ✓         ✓        ✓          ✗           ?          ?
-  200s     access   request    no job      unknown    unknown
-           logged   accepted   picked up
-                              ↑
-                    divergence is in here
-```
+**Draw the map before you probe**, using widget C from the Templates section. The map is not
+decoration — it is your search space made visible, and it is what stops you losing track of
+which regions are actually cleared.
 
 Mark each landmark cleared (✓), failing (✗), or unknown (?), and note *what evidence* produced
-each mark. Update it after every probe and show the updated version to the operator — it makes
+each mark. Re-emit the compact map (widget A) after every probe that changes a mark — it makes
 your reasoning inspectable at a glance and invites the correction that saves you an hour.
 
 **Find the known-good reference.** When did it last work? What is different now? A working
@@ -302,12 +368,12 @@ one, you are not investigating, you are confirming. Deliberately include:
 - the possibility that the system is misreporting its own state (see §5).
 
 Then, before designing any experiment, run every hypothesis against the evidence you already
-hold. A hypothesis contradicted by an observation already in hand is dead at zero cost —
-killing it with an experiment instead is paying probe budget for information you already own.
+hold. A hypothesis contradicted by an observation already in hand is rejected at zero cost —
+rejecting it with an experiment instead is paying probe budget for information you already own.
 This free pass is itself a bisection step: only the survivors earn experiments, and if exactly
 one survives, your next move may be a verdict-gate re-walk rather than a probe at all.
 
-**Decide.** Design the experiment that best *discriminates* between the live hypotheses — ideally
+**Decide.** Design the experiment that best *discriminates* between the open hypotheses — ideally
 one that can falsify your favourite cheaply. Prefer experiments whose two outcomes point in
 different directions; an experiment that "confirms" under several hypotheses at once has taught
 you nothing. Before running it, say what each result will mean. That commitment prevents the
@@ -475,5 +541,12 @@ because they will make decisions based on it.
   of evidence: degraded baselines, failure as conjunction, defences that hide faults, hindsight
   bias. Read this when assessing whether a defect you found is *the* one, and again when writing
   the prevention plan.
-- `references/worked-example.md` — a full investigation using this method, including the wrong
-  turns and what corrected them. Read this for a concrete model of the method under way.
+- `references/worked-example.md` — a full investigation that went badly before it went well:
+  a plausible mechanism promoted to cause, a conclusion that outran its evidence, and a control
+  contaminated by hand-copying. Read this when an investigation is going in circles, or to see
+  what the failure modes look like from the inside.
+- `references/worked-example-bisection.md` — a full investigation that converged cleanly:
+  choosing the cheap axis when the obvious one is unobservable, rejecting hypotheses for free,
+  using a component's metadata when its logs are opaque, and a leading hypothesis that turned
+  out to be wrong *even though the fix derived from it worked*. Read this for a model of the
+  method running well, and before deciding a working fix means the investigation is over.
