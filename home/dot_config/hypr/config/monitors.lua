@@ -26,9 +26,14 @@ hl.monitor({
     -- Explicit position rather than "auto": toggling this monitor off and on made
     -- Hyprland re-place it to the right of MONITOR2 instead of its usual left slot.
     position  = "0x0",
-    scale     = 1,
+    scale     = 1.0,
     bitdepth = 10,
-    cm = "hdr",
+    -- The desktop stays SDR (wide-gamut P3 rather than HDR): in HDR mode, SDR
+    -- content is tone-mapped after antialiasing, which fades thin strokes and
+    -- blooms heavy ones, so text looks both washed out and blown up.
+    -- render:cm_auto_hdr (on by default) still flips the panel to HDR while a
+    -- fullscreen HDR client such as a game runs; the sdr_* values apply then.
+    cm = "dcip3",
     sdr_eotf = "gamma22",
     sdrbrightness = 0.75,
     sdrsaturation = 1.1,
@@ -44,10 +49,10 @@ hl.monitor({
     mode      = "preferred",
     -- MONITOR1 is 3840 logical px wide, so this sits immediately to its right.
     -- Vertically centred against it: (2160 - 2160/1.25) / 2 = 216.
-    position  = "3840x216",
+    position  = "3840x300",
     scale     = 1.25,
     bitdepth = 10,
-    -- cm = "dcip3",
+    cm = "dcip3",
     sdr_eotf = "gamma22",
     sdrbrightness = 1.0,
     sdrsaturation = 1.0,
