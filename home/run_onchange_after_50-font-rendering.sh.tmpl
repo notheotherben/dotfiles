@@ -1,0 +1,15 @@
+#!/bin/sh
+# Font rendering settings that GTK, Chromium/Electron and Firefox read from
+# gsettings rather than fontconfig. Keeps them in step with
+# dot_config/fontconfig/fonts.conf (full hinting, grayscale antialiasing).
+# Grayscale is deliberate: the AW3225QF is a QD-OLED with a triangular subpixel
+# layout, so subpixel (RGB) antialiasing produces colour fringes on it.
+{{ if eq .chezmoi.os "linux" -}}
+set -eu
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface font-hinting 'full'
+  gsettings set org.gnome.desktop.interface font-antialiasing 'grayscale'
+fi
+{{ else -}}
+exit 0
+{{ end -}}
