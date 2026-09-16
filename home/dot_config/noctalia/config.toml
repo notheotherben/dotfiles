@@ -1,6 +1,21 @@
 [accessibility]
 ui_scale = 1.20
 
+# Neither panel has a kernel backlight, so brightness goes over DDC/CI. This
+# only turns discovery on; each monitor below opts in explicitly so noctalia
+# never falls back to "no control" if a probe is slow on first start.
+# HDMI-A-2 is the AW3225QF (OLED), DP-3 the U2720Q -- see hypr/config/variables.lua.
+# The base OLED level is set by ddcutil in hypr/config/autostart.lua; noctalia
+# just reads whatever the panel reports and adjusts from there.
+[brightness]
+enable_ddcutil = true
+
+    [brightness.monitor.HDMI-A-2]
+    backend = "ddcutil"
+
+    [brightness.monitor.DP-3]
+    backend = "ddcutil"
+
 [bar.default]
 center = [ "workspaces", "spacer_1", "active_window" ]
 concave_edge_corners = true
