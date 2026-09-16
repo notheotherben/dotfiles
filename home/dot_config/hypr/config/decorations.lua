@@ -35,7 +35,9 @@ hl.config({
         dim_special = 0.9,
         rounding = 6,
         active_opacity = 1.0,
-        inactive_opacity = 0.95,
+        -- Translucent inactive windows let the blurred wallpaper bleed through
+        -- their text, which costs contrast on every window that isn't focused.
+        inactive_opacity = 1.0,
         fullscreen_opacity = 1,
         blur = {
             size = 5,
