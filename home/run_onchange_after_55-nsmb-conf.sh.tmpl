@@ -1,0 +1,46 @@
+#!/bin/sh
+# Install /etc/nsmb.conf: SMB client tuning for the Synology NAS. The global
+# file overrides ~/Library/Preferences/nsmb.conf, so it has to live in /etc.
+# Requires sudo once per change; re-runs whenever this script changes.
+# Shares must be remounted for new settings to apply.
+{{ if eq .chezmoi.os "darwin" -}}
+set -eu
+
+want=$(mktemp)
+trap 'rm -f "$want"' EXIT
+cat > "$want" <<'EOF'
+# Managed by chezmoi (run_onchange_after_55-nsmb-conf). Every key here is
+# documented in nsmb.conf(5) on macOS 27; remount shares after editing.
+[default]
+# SMB 3 only. The NAS negotiates 3.1.1; nothing here needs SMB 1 or 2.
+protocol_vers_map=4
+# Connect on 445 only; never fall back to NetBIOS on 139.
+port445=no_netbios
+# Multichannel stays on: next to the tailnet channel the client opens a direct
+# LAN channel to the NAS (see `smbutil multichannel -a`). Prefer a wired NIC
+# over Wi-Fi whenever one is plugged in.
+mc_on=yes
+mc_prefer_wired=yes
+# Soft mounts: I/O errors instead of indefinite hangs when the NAS goes away.
+soft=yes
+# No named streams (xattrs, resource forks) over SMB: fewer round trips per
+# file. The rustic repository carries its own metadata and needs none of this.
+streams=no
+# macOS 27 still negotiates signing with this set (sessions show AES-128-GMAC);
+# it is hardware accelerated and costs nothing measurable on Wi-Fi. Session
+# encryption stays off (the default): the tailnet path is already encrypted
+# and the LAN channel is local.
+signing_required=no
+EOF
+
+if cmp -s "$want" /etc/nsmb.conf; then
+  echo "==> /etc/nsmb.conf already up to date"
+  exit 0
+fi
+
+echo "==> Installing /etc/nsmb.conf (you'll be prompted for your password)"
+sudo install -m 0644 -o root -g wheel "$want" /etc/nsmb.conf
+echo "==> Remount SMB shares for the new settings to take effect"
+{{ else -}}
+exit 0
+{{ end -}}

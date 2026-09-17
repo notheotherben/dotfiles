@@ -69,6 +69,10 @@ config, the backup units.
 
 - **Touch ID for `sudo`**, via `/etc/pam.d/sudo_local` so it survives OS
   updates.
+- **SMB client tuning** in `/etc/nsmb.conf`: SMB 3 only, port 445 only,
+  multichannel on with wired preferred, soft mounts, no named streams. Installed
+  with `sudo` by `run_onchange_after_55-nsmb-conf`; remount shares after it
+  changes.
 - **Homebrew** as the package manager, driven by `~/.Brewfile`.
 - **Finder defaults**: all extensions, hidden files, no desktop icons, no
   extension-change warning.
@@ -211,6 +215,7 @@ home/
   run_onchange_after_48-hypridle        (re)load hypridle         (Linux)
   run_onchange_after_49-otelcol         OTel collector + profiler (Linux)
   run_once_after_50-touchid-sudo        Touch ID for sudo         (macOS)
+  run_onchange_after_55-nsmb-conf       /etc/nsmb.conf SMB tuning (macOS)
   run_once_after_60-default-shell       chsh to fish
   run_onchange_after_70-rustic-schedule (re)load the backup job
   run_once_after_80-trust-internal-ca   trust the internal CA
