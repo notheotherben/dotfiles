@@ -7,6 +7,10 @@
 	<string>dev.pannell.rustic-backup</string>
 	<key>ProgramArguments</key>
 	<array>
+		<!-- caffeinate -i: the job usually fires from a dark wake, and an idle
+		     sleep mid-run drops the SMB session under rustic. -->
+		<string>/usr/bin/caffeinate</string>
+		<string>-i</string>
 		<string>/opt/homebrew/bin/rustic</string>
 		<string>backup</string>
 	</array>

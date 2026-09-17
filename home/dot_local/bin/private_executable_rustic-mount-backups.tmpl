@@ -1,0 +1,73 @@
+{{- if eq .chezmoi.os "darwin" -}}
+{{- $root := . -}}
+{{- with $details := onepasswordDetailsFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
+{{- with $fields := onepasswordItemFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
+#!/bin/sh
+# Mount (or unmount) the rustic backup share for the LaunchAgent, with no GUI.
+#
+# The old hook used `osascript -e 'mount volume ...'`, which goes through
+# NetAuthAgent. When the connect fails -- typically right after wake, before the
+# tailnet path to the NAS is passing traffic -- NetAuthAgent shows an error
+# dialog and the hook blocks until a human dismisses it. launchd never starts a
+# second instance while one is still running, so one failed mount silently
+# stopped every hourly backup for days. mount_smbfs has no UI: it mounts or exits.
+#
+# rustic does not run `run-failed` hooks when a `run-before` hook fails, so a
+# failed mount reports itself to the cron monitor here.
+set -eu
+
+server='{{ $fields.server.value }}'
+share='{{ $fields.volume.value }}'
+user='{{ $details.username.value }}'
+password='{{ $details.password.value | replace "'" "'\\''" }}'
+mountpoint="$HOME/.local/mnt/$share"
+failed_url='https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?token={{ $fields.cron_token.value }}&status=failed'
+
+is_mounted() {
+  mount | grep -q " on $mountpoint (smbfs"
+}
+
+fail() {
+  echo "rustic-mount-backups: $*" >&2
+  curl -sS -m 15 -o /dev/null "$failed_url" || true
+  exit 1
+}
+
+case "${1:-mount}" in
+  mount)
+    mkdir -p "$mountpoint"
+
+    # After wake the tailnet path to the NAS can take a while to pass traffic.
+    # Poll the SMB port instead of connecting blind; give up loudly after ~2 min.
+    n=0
+    until nc -z -G 5 "$server" 445 >/dev/null 2>&1; do
+      n=$((n + 1))
+      [ "$n" -ge 12 ] && fail "$server:445 unreachable after ~2 minutes"
+      sleep 5
+    done
+
+    # A mount left over from a previous run is probably stale after sleep.
+    if is_mounted; then
+      diskutil unmount force "$mountpoint" >/dev/null 2>&1 \
+        || umount -f "$mountpoint" \
+        || fail "could not unmount stale $mountpoint"
+    fi
+
+    # Percent-encode every byte so URL-reserved characters in the password survive.
+    encoded=$(printf '%s' "$password" | od -An -tx1 -v | tr -d ' \n' | sed 's/../%&/g')
+    mount_smbfs -N -o nobrowse,soft "//$user:$encoded@$server/$share" "$mountpoint" \
+      || fail "mount_smbfs failed for //$user@$server/$share"
+    ;;
+  unmount)
+    if is_mounted; then
+      diskutil unmount "$mountpoint" >/dev/null 2>&1 || umount "$mountpoint"
+    fi
+    ;;
+  *)
+    echo "usage: $0 [mount|unmount]" >&2
+    exit 2
+    ;;
+esac
+{{- end }}
+{{- end }}
+{{- end }}

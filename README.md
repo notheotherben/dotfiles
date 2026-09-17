@@ -72,8 +72,12 @@ config, the backup units.
 - **Homebrew** as the package manager, driven by `~/.Brewfile`.
 - **Finder defaults**: all extensions, hidden files, no desktop icons, no
   extension-change warning.
-- Backups run from a **LaunchAgent** that mounts the SMB share with `osascript`
-  before each run.
+- Backups run from a **LaunchAgent** that mounts the SMB share headlessly with
+  `mount_smbfs` (via `~/.local/bin/rustic-mount-backups`) before each run and
+  unmounts it afterwards. Finder-style mounting (`osascript`, `open`) is
+  deliberately avoided: on a failed connect it pops a dialog that blocks a
+  background job until someone dismisses it, and launchd skips every later run
+  while the stuck one is alive.
 
 ### CachyOS / Arch
 
@@ -121,7 +125,7 @@ this list before applying it to anything that matters.
 | What | Where | Notes |
 | --- | --- | --- |
 | Git identity and signing key | `home/dot_config/git/config.tmpl` | Name, email, and the SSH public key 1Password signs with. The `op-ssh-sign` paths are already templated per-OS. |
-| 1Password item IDs | `home/dot_config/rustic/private_rustic.toml.tmpl`, `home/dot_config/Yubico/private_u2f_keys.tmpl` | Both hard-code an item UUID. The backup item needs `server`, `volume`, `encryption`, `domain`, `telemetry`, and `cron_token` fields plus a username; the Yubikey item needs a `u2f_keys` field. Templates fail loudly when a field is missing, which is the right failure. |
+| 1Password item IDs | `home/dot_config/rustic/private_rustic.toml.tmpl`, `home/dot_config/Yubico/private_u2f_keys.tmpl` | Both hard-code an item UUID. The backup item needs `server`, `volume`, `encryption`, `domain`, `telemetry`, and `cron_token` fields plus the SMB username and password; the Yubikey item needs a `u2f_keys` field. Templates fail loudly when a field is missing, which is the right failure. |
 | Service endpoints | `home/dot_config/mise/config.toml`, `home/dot_config/atuin/config.toml`, `home/private_dot_ssh/private_config.tmpl` | `VAULT_ADDR`, `NOMAD_ADDR`, the atuin sync server, and the `nas` host all point at a private tailnet. |
 | Backup target and monitoring | `home/dot_config/rustic/private_rustic.toml.tmpl` | The status check-in URL, the SMB share, and — on Linux — the `/backup` mount that `rustic-backup.service` declares in `RequiresMountsFor`. That mount comes from `/etc/fstab` and is *not* managed here. |
 | Internal CA | `home/dot_config/certs/`, `run_once_after_80-trust-internal-ca.sh.tmpl` | Swap the certificate and the CN the script checks for, or drop both. |

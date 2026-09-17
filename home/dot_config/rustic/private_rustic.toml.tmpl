@@ -1,27 +1,42 @@
 {{- with $root := . }}
 {{- with $details := onepasswordDetailsFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
 {{- with $fields := onepasswordItemFields "z54pr2l2qi4hrkhlkp6wn2pfji" -}}
-{{- /* macOS mounts the SMB share under /Volumes via osascript; on Linux fstab
-       mounts it at /backup on boot, so the hook only asserts it's there. */ -}}
-{{- $mount := printf "/Volumes/%s" $fields.volume.value -}}
-{{- $mountCmd := printf "osascript -e 'mount volume \"smb://%s@%s/%s\"'" $details.username.value $fields.server.value $fields.volume.value -}}
-{{- if ne $root.chezmoi.os "darwin" -}}
+{{- /* macOS: the LaunchAgent mounts the SMB share under ~/.local/mnt with
+       ~/.local/bin/rustic-mount-backups (headless mount_smbfs; see that script
+       for why not osascript). Linux: fstab mounts it at /backup on boot, so the
+       hook only asserts it's there. */ -}}
+{{- $darwin := eq $root.chezmoi.os "darwin" -}}
+{{- $mount := printf "%s/.local/mnt/%s" $root.chezmoi.homeDir $fields.volume.value -}}
+{{- $mountHook := printf "%s/.local/bin/rustic-mount-backups" $root.chezmoi.homeDir -}}
+{{- if not $darwin -}}
 {{- $mount = "/backup" -}}
-{{- $mountCmd = printf "mountpoint -q %s" $mount -}}
 {{- end -}}
+{{- $checkin := printf "https://status.sierrasoftworks.com/api/v1/cron/backup.%s/check-in?token=%s&status=" $root.chezmoi.hostname $fields.cron_token.value -}}
 [global]
 opentelemetry = "{{ $fields.telemetry.value }}/v1/metrics"
 
+# Check-ins are best effort: a slow or down monitor must neither block nor fail
+# the backup. rustic runs hooks without a shell, hence the table form.
 [global.hooks]
 run-before = [
-  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=running&token={{ $fields.cron_token.value }}",
-  {{ $mountCmd | toJson }}
+  { command = "curl", args = ["-sS", "-f", "-m", "15", "-o", "/dev/null", "{{ $checkin }}running"], on-failure = "warn" },
+{{- if $darwin }}
+  { command = {{ $mountHook | toJson }}, args = ["mount"] }
+{{- else }}
+  { command = "mountpoint", args = ["-q", {{ $mount | toJson }}] }
+{{- end }}
 ]
 run-after = [
-  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=succeeded&token={{ $fields.cron_token.value }}"
+{{- if $darwin }}
+  { command = {{ $mountHook | toJson }}, args = ["unmount"], on-failure = "warn" },
+{{- end }}
+  { command = "curl", args = ["-sS", "-f", "-m", "15", "-o", "/dev/null", "{{ $checkin }}succeeded"], on-failure = "warn" }
 ]
 run-failed = [
-  "curl https://status.sierrasoftworks.com/api/v1/cron/backup.{{ $root.chezmoi.hostname }}/check-in?status=failed&token={{ $fields.cron_token.value }}"
+{{- if $darwin }}
+  { command = {{ $mountHook | toJson }}, args = ["unmount"], on-failure = "warn" },
+{{- end }}
+  { command = "curl", args = ["-sS", "-f", "-m", "15", "-o", "/dev/null", "{{ $checkin }}failed"], on-failure = "warn" }
 ]
 
 [repository]
@@ -36,6 +51,10 @@ exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
 host = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
 git-ignore = true
 metrics-job = "{{ $root.chezmoi.hostname }}.{{ $fields.domain.value -}}"
+{{- if $darwin }}
+# The repository is mounted inside $HOME; never back it up into itself.
+globs = ["!{{ $root.chezmoi.homeDir }}/.local/mnt"]
+{{- end }}
 
 [backup.metrics-labels]
 "service.name" = "rustic"
